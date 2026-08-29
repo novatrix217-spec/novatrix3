@@ -1,9 +1,11 @@
 # NovatrixAI — Site vitrine (novatrix-web)
 
 Refonte du site vitrine NovatrixAI. **Phase 1 — Fondations** (scaffolding, contenu réel,
-correction des bugs identifiés dans le brief) et **Phase 2 — Structure & animations légères**
+correction des bugs identifiés dans le brief), **Phase 2 — Structure & animations légères**
 (bento grid Services, reveals CSS natifs au scroll, comptage animé des stats,
-`prefers-reduced-motion`) sont terminées. Voir `PROGRESS.md` pour le détail des jalons,
+`prefers-reduced-motion`), **Phase 3 — Storytelling portfolio** (reveal en cascade par étape
+narrative) et **Phase 4 — Effet signature WebGL du hero** (shader OGL réactif au curseur, en
+couche additive lazy-loadée) sont terminées. Voir `PROGRESS.md` pour le détail des jalons,
 décisions et provenance des données.
 
 Ce projet est indépendant de `../novatrix/` (site Nuxt actuel, en production, avec son propre
@@ -17,6 +19,9 @@ modifié pour ce travail.
 - **Tailwind CSS v4** — configuration CSS-first (`@theme` dans `src/app/globals.css`), pas de
   `tailwind.config.ts` (ce fichier n'est plus généré par défaut en v4). Voir "Décisions
   techniques" ci-dessous.
+- **OGL** (`^1.0.11`) — bibliothèque WebGL minimale (24 Ko minifié/gzippé annoncés, zéro
+  dépendance), utilisée uniquement pour l'effet signature du hero (Phase 4), chargée en
+  dynamique côté client. Voir "Décisions techniques" > OGL vs Three.js.
 - **TypeScript**, ESLint (config `next/core-web-vitals`).
 - **Couche de contenu locale** (`src/lib/content/*.ts`) en attendant Sanity — voir plus bas.
 
@@ -37,7 +42,8 @@ src/
   components/
     layout/    Header, Footer
     ui/        Container, Section, Kicker, Button, StatCard, WhatsAppCta, RevealTitle
-    sections/  Hero, StatsStrip, ServicesGrid, Testimonials, TeamSection, ProjectCaseStudy
+    sections/  Hero (+ HeroBackground/HeroCanvas, effet WebGL Phase 4), StatsStrip,
+               ServicesGrid, Testimonials, TeamSection, ProjectCaseStudy
     forms/     ContactForm (client component, useActionState)
   lib/
     content/  couche de données locale (services, projets, témoignages, stats, équipe, site)
@@ -169,6 +175,45 @@ aucune variante de texte par persona n'existe dans les sources fournies — en �
 aurait été inventer du texte de vente, contraire à la règle T3. Le hero Phase 1 affiche donc
 un message réel unique (repris de l'ancien hero React, cf. `src/components/sections/Hero.tsx`
 pour la source exacte). La personnalisation est un candidat naturel pour la Phase 2.
+
+### 9. Effet signature WebGL du hero (Phase 4) : OGL, pas Three.js/R3F
+
+Le brief laissait le choix ouvert entre OGL et Three.js/R3F, en recommandant OGL en premier
+choix si l'effet recherché est ciblé (par opposition à une scène 3D complexe avec chargement
+GLTF/physique).
+
+**Effet retenu** : un shader plein écran en fond du hero, réactif à la position du curseur
+(distorsion + glow qui suit le curseur avec un lissage) et animé d'un mouvement organique lent
+(bruit de valeur) quand le curseur est immobile — type Lusion, mais un seul effet ciblé, pas
+une scène. Aucun modèle 3D, aucun chargement d'asset, aucune caméra à proprement parler
+(géométrie "triangle plein écran" en espace clip-space direct), aucune physique.
+
+**Décision** : OGL, conformément à la recommandation du brief, sans besoin identifié qui
+l'aurait rendu limitant.
+- Le pattern "triangle plein écran + shader fragment" couvert par ce périmètre est justement
+  le cas d'usage central d'OGL (`Triangle`/`Program`/`Mesh`/`Renderer`, voir
+  `node_modules/ogl/src/extras/Triangle.js`) — pas besoin d'un moteur de scène complet
+  (chargeurs GLTF, matériaux PBR, éclairage, post-processing multi-passes) qu'apporterait
+  Three.js/R3F pour un gain nul sur cet effet précis.
+- Poids : `npm install ogl` résout en `1.0.11`, **zéro dépendance transitive**
+  (`node_modules/ogl/package.json`), contre React Three Fiber qui embarquerait Three.js
+  (bien plus volumineux) + `@react-three/fiber` + son propre reconciler React — un coût de
+  bundle largement disproportionné pour un shader de fond, alors même que la contrainte 2 du
+  brief (lazy-load, LCP non affecté) est justement conçue pour minimiser ce genre de poids.
+- Types TypeScript fournis nativement par le paquet (`ogl/types/index.d.ts`), donc aucune
+  dépendance `@types/*` supplémentaire.
+- Aucun besoin de déclarative JSX scene-graph (l'apport principal de R3F par rapport à
+  Three.js "vanilla") pour une scène à un seul mesh/shader — un `useEffect` impératif classique
+  (`src/components/sections/HeroCanvas.tsx`) suffit et reste plus simple à auditer/nettoyer
+  (un seul `try/catch`, un seul chemin de cleanup explicite) qu'une arborescence de composants
+  R3F pour ce périmètre.
+
+**Si ce périmètre évoluait** (scène 3D plus riche, modèles chargés, interactions physiques),
+Three.js/R3F redeviendrait le choix recommandé — décision à réévaluer à ce moment-là, pas
+anticipée ici.
+
+Détail de l'implémentation, des garde-fous (HTML-first, lazy-load, `prefers-reduced-motion`,
+fallback WebGL silencieux) et des tests : voir `PROGRESS.md` > Jalon Phase 4.
 
 ## Contenu réel — où sont les sources
 

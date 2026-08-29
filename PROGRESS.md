@@ -83,11 +83,15 @@ sanctionnée par le brief lui-même et un recoupement partiel.
 - **Phase 2** : **terminée**, voir la section dédiée ci-dessous. Bascule dark mode réelle
   reportée (hors périmètre des livrables Phase 2 explicitement listés).
 - **Phase 3** : **terminée**, voir la section dédiée ci-dessous.
-- **Phase 4** : effet signature WebGL/shader sur le hero (OGL ou Three.js/R3F selon
-  complexité retenue), en couche additive au-dessus du HTML déjà complet.
-- **Phase 5** : `prefers-reduced-motion` appliqué aux animations ajoutées en phases 2-4 (la
-  media query globale existe déjà dans `globals.css`, il restera à vérifier chaque nouvelle
-  animation individuellement), transitions de page fluides, tests Lighthouse/device réel.
+- **Phase 4** : **terminée**, voir la section dédiée ci-dessous.
+- **Phase 5** : transitions de page fluides, tests Lighthouse/device réel. Correctif : la
+  mention initiale de `prefers-reduced-motion` comme travail de Phase 5 était imprécise —
+  c'est en réalité déjà couvert fonctionnellement depuis la Phase 2 (media query globale +
+  neutralisation des reveals CSS dans `globals.css`, validé QA à l'époque) et à nouveau en
+  Phase 4 pour le module WebGL (`HeroBackground.tsx`, double garde `useSyncExternalStore` +
+  vérification dans `HeroCanvas.tsx`). Il ne reste donc à faire en Phase 5 que la vérification
+  des éventuelles nouvelles animations ajoutées par cette phase elle-même (transitions de
+  page), pas un chantier `prefers-reduced-motion` de zéro.
 - Brancher Sanity (ou confirmer Payload CMS comme alternative) une fois un compte/organisation
   fourni par le client.
 - Brancher la persistance + notification réelle du formulaire de contact.
@@ -448,3 +452,144 @@ décalage temporel — décision de design system à valider séparément (`desi
 - **Tests automatisés persistants** : script Playwright de vérification resté dans le
   scratchpad de session, non ajouté comme dépendance permanente du projet (même choix qu'en
   Phase 2, `package.json` inchangé).
+
+## Jalon : Phase 4 — Effet signature WebGL du hero (terminée)
+
+Date : 2026-08-29.
+
+### Décision technique : OGL (pas Three.js/R3F)
+
+Recommandation du brief suivie : OGL en premier choix. L'effet demandé est ciblé (un seul
+shader plein écran réactif au curseur/mouvement organique lent en fond de hero), pas une
+scène 3D (aucun modèle GLTF, aucune physique, aucune lumière/matériaux PBR, aucun besoin de
+scene-graph riche). Rien n'a fait apparaître un besoin réel qui rendrait OGL limitant pour ce
+périmètre — décision non révisée. `npm install ogl` → `1.0.11`, zéro dépendance transitive
+supplémentaire (`node_modules/ogl/package.json`), types TS fournis nativement
+(`ogl/types/index.d.ts`), compatible du fait de son API minimale (`Renderer`, `Triangle`,
+`Program`, `Mesh`) avec le pattern "triangle plein écran" standard (`src/extras/Triangle.js` :
+géométrie clip-space directe, aucune caméra requise), qui suffit entièrement à un shader de
+fond en 2D.
+
+### Ce qui est fait
+
+1. **`src/components/sections/HeroCanvas.tsx`** (`'use client'`) : composant WebGL isolé.
+   - Shader GLSL ES 1.00 (compatible WebGL1 et WebGL2, aucun `#version 300 es`) : distorsion
+     de matière + glow réactifs à la position du curseur (lissée par interpolation linéaire
+     frame à frame), plus un bruit de Perlin/valeur simplifié pour un mouvement organique lent
+     quand le curseur est immobile. Uniquement les 3 couleurs du token hero déjà en place
+     (`#1C0038` / `#6D28D9` / `#C026D3`, `globals.css`), aucune couleur inventée.
+   - Détection WebGL manuelle (`canvas.getContext('webgl2') || canvas.getContext('webgl')`)
+     **avant** toute instanciation du `Renderer` OGL, pour un fallback réellement silencieux
+     (le `Renderer` d'OGL logue lui-même une erreur console si `getContext` échoue).
+   - Double vérification `prefers-reduced-motion` en tête d'effet (défense en profondeur,
+     redondante avec `HeroBackground.tsx` — voir plus bas).
+   - Le shader et l'appel `import('ogl')` sont dans un `try/catch` : toute erreur d'init
+     (contexte perdu, échec de compilation shader, etc.) est absorbée silencieusement, le
+     dégradé CSS du parent (`Hero.tsx`) reste seul visible.
+   - Transition d'opacité douce (`opacity 700ms ease-out`) déclenchée seulement après le
+     premier `requestAnimationFrame` réellement rendu (pas au montage du composant) — pas de
+     flash entre le dégradé CSS et l'apparition du canvas.
+   - Nettoyage complet au démontage : `cancelAnimationFrame`, listeners `pointermove`/`resize`
+     retirés, canvas détaché du DOM, contexte WebGL libéré via l'extension
+     `WEBGL_lose_context`.
+   - `<div aria-hidden="true" className="pointer-events-none absolute inset-0">` : jamais
+     interactif, jamais lu par un lecteur d'écran, ne bloque jamais les clics sur le CTA/les
+     liens du hero (contrainte 1 du brief).
+2. **`src/components/sections/HeroBackground.tsx`** (`'use client'`) : pont entre le hero
+   Server Component et `HeroCanvas`. Nécessaire car Next.js interdit
+   `next/dynamic(..., { ssr: false })` directement dans un Server Component ("'ssr: false' is
+   not allowed with 'next/dynamic' in Server Components") — `Hero.tsx` reste donc un Server
+   Component inchangé de ce point de vue, seul ce petit fichier dédié porte la directive
+   `'use client'`.
+   - `dynamic(() => import('./HeroCanvas').then((mod) => mod.HeroCanvas), { ssr: false })` :
+     le chunk `HeroCanvas`/`ogl` n'est jamais dans le HTML initial ni dans le bundle JS de
+     premier chargement (vérifié, voir tests).
+   - Gate `prefers-reduced-motion` via `useSyncExternalStore` (`getServerSnapshot` renvoie
+     toujours `false`, identique au premier rendu client → aucun mismatch d'hydratation) :
+     tant que `matchMedia('(prefers-reduced-motion: reduce)').matches` est vrai, `HeroCanvas`
+     n'est jamais monté, donc son import dynamique n'est jamais déclenché — aucun octet du
+     module WebGL n'est chargé dans ce cas (pas une version "figée" du shader, rien n'est
+     chargé du tout, conforme à la contrainte 3 du brief). Effet de bord positif de ce choix
+     (plutôt qu'un `useState`+`useEffect` qui aurait déclenché une erreur ESLint
+     `react-hooks/set-state-in-effect`, voir Tests) : si l'utilisateur bascule ce réglage OS
+     en cours de visite, le canvas se démonte/remonte proprement en conséquence.
+3. **`src/components/sections/Hero.tsx`** : changement strictement additif.
+   - `<HeroBackground />` ajouté comme premier enfant de la `<section>`, juste avant
+     `<Container>`. `<Container>` reçoit `relative z-10` (nouveau) pour garantir que le H1/
+     l'accroche/le CTA restent au-dessus du calque canvas dans tous les cas (en plus de
+     `pointer-events-none` côté canvas, qui suffit déjà à ne jamais intercepter les clics).
+   - Aucune ligne de texte, aucun `ButtonLink`/`WhatsAppCta` déplacé ou modifié. Le style
+     inline du dégradé CSS sur la `<section>` (`--hero-bg`/`--hero-grad-start`/
+     `--hero-grad-end`) n'a pas été touché : c'est toujours lui qui s'affiche tant que le
+     canvas n'est pas prêt, silencieux, ou désactivé par reduced-motion.
+4. **`package.json`** : ajout de la dépendance `ogl` (`^1.0.11`) — aucune autre dépendance
+   ajoutée.
+
+### Tests exécutés (résultats)
+
+1. **`npm run lint`** : 0 erreur après un aller-retour — la première version de
+   `HeroBackground.tsx` (un `useState` + `setEnabled(true)` appelé directement dans le corps
+   d'un `useEffect`) a été rejetée par `react-hooks/set-state-in-effect` (cascading renders).
+   Corrigé en passant à `useSyncExternalStore` (voir ci-dessus). `npm run lint` final : 0
+   erreur, 0 avertissement.
+2. **`npm run build`** : succès, TypeScript strict compilé sans erreur. Les 8 routes
+   (5 pages + `_not-found` + `sitemap.xml` + `robots.txt`) restent toutes `○ (Static)` — aucune
+   régression de la contrainte T1 (SSG intact malgré l'ajout d'un composant client).
+3. **Séparation du bundle (chunk `HeroCanvas`/`ogl` bien en lazy-load)** : inspection directe
+   de `.next/server/app/page/build-manifest.json` (`rootMainFiles`, les 5 chunks JS chargés au
+   premier rendu de `/`) comparée à une recherche du code source dans `.next/static/chunks/*` :
+   - Chunk contenant le shader (`grep -rl "vUv" .next/static/chunks/`) →
+     `0z9lv0_w0n84o.js` (3,5 Ko).
+   - Chunk contenant OGL (`grep -rl "unable to create webgl context"
+     .next/static/chunks/` — chaîne unique à `Renderer.js` d'OGL) → `2nm573r05da_o.js`
+     (44 Ko, cohérent avec l'ordre de grandeur "~24 Ko minifié/gzippé" annoncé par le brief
+     pour une taille non gzippée).
+   - **Aucun des deux ne figure dans `rootMainFiles`** (`3s6nzrbk-8mnv.js`,
+     `19mx3mg6lkumu.js`, `1mkbuudhndal5.js`, `2-rtuqsgzmno4.js`, chunk turbopack) : confirmé
+     que ni le composant `HeroCanvas` ni la bibliothèque `ogl` ne sont chargés au premier
+     rendu de `/`, uniquement au moment où `<HeroCanvas />` est effectivement monté côté
+     client (post-hydratation, hors reduced-motion).
+4. **`curl` HTML brut sur `/`** (`npm run build && npm run start -p 3101`, sans exécution
+   JS) : présence confirmée du kicker ("Révolutionnez votre futur avec NovatrixAI"), de
+   l'accroche ("Innover. Automatiser. Performer.", 2 occurrences — kicker+h1 imbriqués dans le
+   payload RSC + le DOM rendu), du CTA ("Réserver un audit gratuit", "audit gratuit" × 6
+   occurrences DOM + payload RSC) et du CTA WhatsApp ("Discuter sur WhatsApp" × 4 occurrences).
+   **`grep -o "canvas" ...` → 0 occurrence** : confirmé qu'aucun `<canvas>` n'est présent dans
+   le HTML servi par le serveur (cohérent avec `ssr: false` + gate reduced-motion côté client,
+   contrainte 1 du brief — le canvas n'existe tout simplement pas sans JS, jamais une source
+   de contenu, encore moins la seule).
+5. **Vérification `prefers-reduced-motion` (lecture de code, pas de Playwright pour ce point
+   précis)** : `HeroBackground.getServerSnapshot()` retourne toujours `false` ; côté client,
+   `getSnapshot()` interroge `window.matchMedia('(prefers-reduced-motion: reduce)').matches`
+   avant tout rendu de `<HeroCanvas />` — si `true`, la fonction retourne `false` et
+   `HeroBackground` rend `null`, donc `dynamic(() => import('./HeroCanvas'))` n'est jamais
+   invoqué et le chunk `HeroCanvas`/`ogl` n'est jamais demandé au réseau. `HeroCanvas.tsx`
+   porte une seconde vérification identique en tête de son propre `useEffect` (`if
+   (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return`) en défense en
+   profondeur, redondante mais sans coût, au cas où ce composant serait un jour réutilisé
+   ailleurs sans passer par `HeroBackground`.
+6. **`git status`** (`novatrix-web`) avant/après : fichiers modifiés/ajoutés attendus
+   uniquement (`package.json`, `package-lock.json`, `src/components/sections/Hero.tsx` modifiés
+   ; `HeroBackground.tsx`, `HeroCanvas.tsx` nouveaux), rien d'inattendu. **`git -C ../novatrix
+   status`** avant/après : `working tree clean` dans les deux cas, aucun fichier de
+   `novatrix/` modifié.
+
+### Contrôles non exécutés (et pourquoi)
+
+- **Lighthouse/Core Web Vitals réel (impact LCP mesuré)** : conforme à PROGRESS.md (Phase 1),
+  explicitement prévu pour la Phase 5 une fois toutes les animations en place — la vérification
+  faite ici (inspection du build manifest, chunk exclu du premier chargement) est le contrôle
+  ciblé demandé pour cette phase, pas un audit Lighthouse complet.
+- **Test multi-navigateurs réel (Safari/WebKit, Firefox, device mobile physique)** : non
+  exécuté dans cet environnement (mêmes limites que les phases précédentes). Le shader
+  n'utilise que des fonctionnalités WebGL1 de base (aucune extension optionnelle requise), et
+  le fallback (contexte WebGL absent → rien ne s'affiche, dégradé CSS seul) a été vérifié par
+  lecture de code et par le comportement de `HeroCanvas.tsx` (detection avant instanciation),
+  pas par un test en navigateur sans support WebGL réel.
+- **Simulation `matchMedia` en environnement de test automatisé (jsdom/Playwright)** : non
+  mise en place — aucune infrastructure de test (Vitest/Playwright) n'existe dans ce projet
+  (`package.json` toujours sans dépendance de test, cohérent avec les phases précédentes) et
+  en ajouter une aurait dépassé le périmètre "vérifications ciblées" demandé pour cette phase.
+  La vérification retenue est la lecture de code du point 5 ci-dessus.
+- **Capture d'écran du rendu visuel du shader** : non prise, conformément à la consigne de
+  sobriété en tokens de cette phase (pas de capture à chaque étape).
