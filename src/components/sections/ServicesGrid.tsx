@@ -45,15 +45,13 @@ export function ServicesGrid() {
                 : 'border-border-subtle shadow-[var(--elev-1)]'
             }`}
           >
-            {isFlagship ? (
-              <h2 className="text-h2 font-display font-bold text-text-primary group-hover:text-accent sm:text-h3">
-                {service.title}
-              </h2>
-            ) : (
-              <h3 className="text-h3 font-display font-bold text-text-primary group-hover:text-accent">
-                {service.title}
-              </h3>
-            )}
+            <h3
+              className={`font-display font-bold text-text-primary group-hover:text-accent ${
+                isFlagship ? 'text-h2 sm:text-h3' : 'text-h3'
+              }`}
+            >
+              {service.title}
+            </h3>
             <p className="text-small mt-3 text-text-secondary">{service.description}</p>
             <span className="text-small mt-4 inline-block font-semibold text-accent">En savoir plus →</span>
           </Link>
