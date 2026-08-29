@@ -1,7 +1,9 @@
 # NovatrixAI — Site vitrine (novatrix-web)
 
-Refonte du site vitrine NovatrixAI. **Phase 1 — Fondations** : scaffolding, contenu réel,
-correction des bugs identifiés dans le brief. Voir `PROGRESS.md` pour le détail des jalons,
+Refonte du site vitrine NovatrixAI. **Phase 1 — Fondations** (scaffolding, contenu réel,
+correction des bugs identifiés dans le brief) et **Phase 2 — Structure & animations légères**
+(bento grid Services, reveals CSS natifs au scroll, comptage animé des stats,
+`prefers-reduced-motion`) sont terminées. Voir `PROGRESS.md` pour le détail des jalons,
 décisions et provenance des données.
 
 Ce projet est indépendant de `../novatrix/` (site Nuxt actuel, en production, avec son propre
@@ -34,12 +36,28 @@ src/
     sitemap.ts, robots.ts
   components/
     layout/    Header, Footer
-    ui/        Container, Section, Kicker, Button, StatCard, WhatsAppCta
+    ui/        Container, Section, Kicker, Button, StatCard, WhatsAppCta, RevealTitle
     sections/  Hero, StatsStrip, ServicesGrid, Testimonials, TeamSection, ProjectCaseStudy
     forms/     ContactForm (client component, useActionState)
-  lib/content/  couche de données locale (services, projets, témoignages, stats, équipe, site)
+  lib/
+    content/  couche de données locale (services, projets, témoignages, stats, équipe, site)
+    reveal.ts  helpers Phase 2 pour les reveals CSS (style inline --reveal-y/--reveal-delay,
+               stagger plafonné, cible du compteur de stats) — aucune logique client, consommé
+               uniquement par des Server Components
 public/brand/   logo réel NovatrixAI (copié depuis ../logo3copie (5).PNG)
 ```
+
+### Reveals CSS natifs au scroll (Phase 2)
+
+Les animations d'apparition au scroll (`src/app/globals.css`) utilisent exclusivement
+`animation-timeline: view()` — aucun JavaScript, aucune dépendance (GSAP volontairement écarté,
+le CSS natif couvre l'intégralité du besoin de cette phase). Point structurant : l'état initial
+`opacity:0`/`transform` n'est déclaré que dans un bloc `@supports (animation-timeline:
+view())`, jamais en dehors — sans cette garde, un navigateur sans support (Firefox stable au
+29/08/2026, derrière le flag `layout.css.scroll-driven-animations.enabled`) recevrait un
+contenu invisible de façon permanente. Voir `PROGRESS.md` (jalon Phase 2) pour le détail complet
+de la chorégraphie et les résultats des tests réels (Playwright, Chromium + Firefox, émulation
+`prefers-reduced-motion`).
 
 ## Scripts disponibles
 
