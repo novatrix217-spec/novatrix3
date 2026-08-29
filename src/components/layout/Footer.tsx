@@ -5,7 +5,10 @@ import { services } from '@/lib/content/services'
 
 export function Footer() {
   return (
-    <footer className="border-t border-border-subtle bg-elevated">
+    <footer
+      className="border-t border-border-subtle bg-elevated"
+      style={{ viewTransitionName: 'site-footer' }}
+    >
       <Container className="grid gap-10 py-16 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <p className="font-display text-lg font-bold text-text-primary">{siteConfig.name}</p>

@@ -6,7 +6,10 @@ import { ButtonLink } from '@/components/ui/Button'
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-50 border-b border-border-subtle bg-elevated/95 backdrop-blur">
+    <header
+      className="sticky top-0 z-50 border-b border-border-subtle bg-elevated/95 backdrop-blur"
+      style={{ viewTransitionName: 'site-header' }}
+    >
       <Container className="flex h-20 items-center justify-between">
         <Link href="/" className="flex items-center gap-3" aria-label={`${siteConfig.name} — Accueil`}>
           <Image

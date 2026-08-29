@@ -34,6 +34,11 @@
      partout, toujours avec --ease-brand ci-dessus (sauf le compteur de stats, en linear —
      voir plus bas), jamais un autre easing inventé. */
   --dur-reveal: 600ms;
+  /* Phase 5 — transitions de page (View Transitions API native), durée distincte de
+     --dur-reveal (sémantique différente : croisement racine entre deux pages, pas un reveal
+     au scroll). Toujours --ease-brand. Voir bloc @media (prefers-reduced-motion) plus bas et
+     src/components/layout/ViewTransitionRouter.tsx pour le déclenchement. */
+  --dur-page-transition: 320ms;
   /* Réservé exclusivement au hero de l'accueil — jamais utilisé ailleurs sur le site. */
   --hero-bg: #1C0038;
   --hero-grad-start: #6D28D9;
@@ -272,6 +277,54 @@
 }
 
 /*
+ * Phase 5 — Transitions de page (livrable 2 du brief). API navigateur native
+ * (`document.startViewTransition`), déclenchée par un unique composant client
+ * (`src/components/layout/ViewTransitionRouter.tsx`) qui intercepte les clics sur les liens
+ * internes. Aucune dépendance ajoutée (pas de `next-view-transitions`, pas de
+ * `<ViewTransition>` de React — cette API expérimentale de React nécessite `react@canary`,
+ * or ce projet est volontairement épinglé sur React 19.2.8 stable, cf. README.md > Décisions
+ * techniques). Fallback propre : si `document.startViewTransition` n'existe pas,
+ * `ViewTransitionRouter` ne pose aucun listener — la navigation `<Link>` de Next.js reprend
+ * son comportement normal, instantané, inchangé depuis les Phases 1-4. Support réel vérifié
+ * le 2026-08-29 (voir commentaire détaillé dans ViewTransitionRouter.tsx) : large (Chrome/Edge
+ * 111+, Safari 18+, Firefox 133+), le fallback ci-dessus couvrant les navigateurs plus
+ * anciens.
+ *
+ * Header/Footer sont partagés par les 5 pages et ne sont jamais réellement démontés lors
+ * d'une navigation (ils vivent dans `RootLayout`, en dehors de `{children}`) : sans
+ * traitement particulier, la capture racine par défaut du navigateur les ferait quand même
+ * clignoter (fade out/in) à chaque clic alors que leur DOM ne change pas. Ancrés via
+ * `view-transition-name` (posé en inline sur `<header>`/`<footer>`) et neutralisés
+ * ci-dessous — technique documentée officiellement par Next.js, voir
+ * node_modules/next/dist/docs/01-app/02-guides/view-transitions.md > "Anchoring the header".
+ */
+@supports (view-transition-name: none) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: var(--dur-page-transition);
+    animation-timing-function: var(--ease-brand);
+  }
+
+  ::view-transition-group(site-header),
+  ::view-transition-group(site-footer) {
+    animation: none;
+  }
+  ::view-transition-old(site-header),
+  ::view-transition-old(site-footer) {
+    display: none;
+  }
+  ::view-transition-new(site-header),
+  ::view-transition-new(site-footer) {
+    animation: none;
+  }
+
+  /* Sans ça, l'overlay UA de la transition capte les clics pendant son animation. */
+  ::view-transition {
+    pointer-events: none;
+  }
+}
+
+/*
  * Accessibilité — prefers-reduced-motion (brief section 6.B / T2, livrable 4).
  *
  * Le premier bloc ci-dessous (préexistant, Phase 1) neutralise les animations pilotées par
@@ -305,5 +358,17 @@
 
   .stat-counter::after {
     content: none !important;
+  }
+
+  /* Défense en profondeur pour les transitions de page (livrable 2) : la garde côté JS
+     (ViewTransitionRouter.tsx) vérifie déjà prefers-reduced-motion avant même de déclencher
+     document.startViewTransition, donc ce bloc ne devrait normalement jamais avoir à agir —
+     posé quand même au cas où l'API serait un jour déclenchée par un autre appelant sans
+     repasser par ce composant (même logique que la double garde HeroCanvas.tsx en Phase 4). */
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
   }
 }

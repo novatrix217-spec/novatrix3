@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, DM_Sans, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
+import { ViewTransitionRouter } from '@/components/layout/ViewTransitionRouter'
 import { siteConfig } from '@/lib/content/site'
 
 // Typographie du brief : titres Bricolage Grotesque (600-700), corps DM Sans (400-500),
@@ -57,6 +58,7 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${bricolage.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
       <body className="flex min-h-screen flex-col antialiased">
+        <ViewTransitionRouter />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
