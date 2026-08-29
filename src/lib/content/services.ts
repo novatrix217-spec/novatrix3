@@ -11,6 +11,9 @@ import type { Service } from './types'
 // de novatrix/comeup_extraction_finale.json). Le service Make/Zapier a été complété avec
 // "n8n" pour rester cohérent avec le positionnement retenu dans NOVATRIX_BRIEF.md section 1
 // ("automatisation (chatbots IA, Make/Zapier/n8n...)").
+// Ordre Phase 2 (brief section 3, livrable 1) : saas-ia en tuile flagship du bento en
+// premier, puis chatbot-leads, automatisation, reseaux-sociaux, agent-administratif,
+// wordpress. Réordonnancement uniquement — aucun libellé ni texte modifié.
 export const services: Service[] = [
   {
     slug: 'saas-ia',
@@ -18,6 +21,13 @@ export const services: Service[] = [
     description:
       "Applications web sur mesure intégrant l'intelligence artificielle pour automatiser et optimiser vos processus.",
     href: '/services#saas-ia',
+    source: 'archives/.../ServicesSection.tsx',
+  },
+  {
+    slug: 'chatbot-leads',
+    title: 'Chatbot IA de génération de leads',
+    description: 'Capturez et qualifiez vos prospects 24/7 grâce à un chatbot intelligent.',
+    href: '/services#chatbot-leads',
     source: 'archives/.../ServicesSection.tsx',
   },
   {
@@ -32,13 +42,6 @@ export const services: Service[] = [
     title: 'Automatisation des publications réseaux sociaux',
     description: 'Planifiez et publiez automatiquement sur tous vos réseaux sociaux.',
     href: '/services#reseaux-sociaux',
-    source: 'archives/.../ServicesSection.tsx',
-  },
-  {
-    slug: 'chatbot-leads',
-    title: 'Chatbot IA de génération de leads',
-    description: 'Capturez et qualifiez vos prospects 24/7 grâce à un chatbot intelligent.',
-    href: '/services#chatbot-leads',
     source: 'archives/.../ServicesSection.tsx',
   },
   {
