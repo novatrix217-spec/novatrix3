@@ -84,20 +84,25 @@ sanctionnée par le brief lui-même et un recoupement partiel.
   reportée (hors périmètre des livrables Phase 2 explicitement listés).
 - **Phase 3** : **terminée**, voir la section dédiée ci-dessous.
 - **Phase 4** : **terminée**, voir la section dédiée ci-dessous.
-- **Phase 5** : transitions de page fluides, tests Lighthouse/device réel. Correctif : la
-  mention initiale de `prefers-reduced-motion` comme travail de Phase 5 était imprécise —
-  c'est en réalité déjà couvert fonctionnellement depuis la Phase 2 (media query globale +
-  neutralisation des reveals CSS dans `globals.css`, validé QA à l'époque) et à nouveau en
-  Phase 4 pour le module WebGL (`HeroBackground.tsx`, double garde `useSyncExternalStore` +
-  vérification dans `HeroCanvas.tsx`). Il ne reste donc à faire en Phase 5 que la vérification
-  des éventuelles nouvelles animations ajoutées par cette phase elle-même (transitions de
-  page), pas un chantier `prefers-reduced-motion` de zéro.
+- **Phase 5** : **terminée**, voir la section dédiée en fin de document (dernier jalon du
+  brief). Correctif conservé ici pour l'historique : la mention initiale de
+  `prefers-reduced-motion` comme travail entièrement neuf de Phase 5 était imprécise — c'était
+  déjà couvert fonctionnellement depuis la Phase 2 (media query globale + neutralisation des
+  reveals CSS dans `globals.css`, validé QA à l'époque) et à nouveau en Phase 4 pour le module
+  WebGL. La Phase 5 a donc porté sur un audit exhaustif de non-régression sur tout le site
+  (livrable 1, voir plus bas) plutôt qu'un chantier de zéro, plus la nouvelle garde ajoutée
+  pour les transitions de page (livrable 2, elles-mêmes ajoutées par cette phase).
+
+### Reste hors périmètre après la Phase 5 (voir jalon Phase 5 pour le détail complet)
+
 - Brancher Sanity (ou confirmer Payload CMS comme alternative) une fois un compte/organisation
   fourni par le client.
 - Brancher la persistance + notification réelle du formulaire de contact.
 - Reconfirmer les 4 chiffres clés et les 3 cas portfolio avec le client (cf. réserve
-  ci-dessus).
+  ci-dessus), ainsi que la section équipe/témoignages (cf. jalon Phase 5).
 - Décider si le bilinguisme FR/EN du site Nuxt actuel doit être repris.
+- Bascule production / DNS / déploiement réel (aucune action externe effectuée, hors
+  périmètre de tous les jalons de ce projet).
 
 ### Test T1 — SEO / crawlabilité (HTML brut avant hydratation)
 
@@ -593,3 +598,286 @@ fond en 2D.
   La vérification retenue est la lecture de code du point 5 ci-dessus.
 - **Capture d'écran du rendu visuel du shader** : non prise, conformément à la consigne de
   sobriété en tokens de cette phase (pas de capture à chaque étape).
+
+## Jalon : Phase 5 — Polish & accessibilité (terminée)
+
+Date : 2026-08-29. Dernière phase du brief.
+
+### Livrable 1 — Audit complet `prefers-reduced-motion` sur tout le site
+
+Méthode : recherche exhaustive (pas relecture partielle) de tout usage d'`animation`,
+`transition`, `animation-timeline` ou `@keyframes` dans l'intégralité de `src/` (CSS, TSX,
+styles inline, classes Tailwind `transition-*`/`animate-*`/`duration-*`/`ease-*`).
+
+**Résultat de l'audit** : deux mécanismes d'animation existent dans tout le projet, aucun
+troisième trouvé.
+
+1. **Le système de reveal CSS** (`globals.css` : `.reveal`, `.reveal-word`, `.stat-counter`,
+   `animation-timeline: view()`) — déjà couvert par le bloc `@media (prefers-reduced-motion:
+   reduce)` existant depuis la Phase 2 (`animation: none !important` + rétablissement explicite
+   `opacity`/`transform`). Aucun oubli trouvé.
+2. **`HeroCanvas.tsx`** : un seul style inline `transition: 'opacity 700ms ease-out'` (fondu
+   d'apparition du canvas WebGL après le premier frame rendu, Phase 4) — **non listé comme
+   couvert nommément** dans l'audit Phase 2/4, vérifié spécifiquement ici. Deux niveaux de
+   protection, tous deux déjà en place avant cette phase et reconfirmés par lecture de code +
+   test réel :
+   - `HeroCanvas` n'est **jamais monté** si `prefers-reduced-motion: reduce` est actif (gate
+     `HeroBackground.tsx` via `useSyncExternalStore`, Phase 4) — cette transition ne peut donc
+     jamais s'exécuter dans ce cas, la question de sa neutralisation par CSS ne se pose même
+     pas.
+   - Défense en profondeur : même si elle s'exécutait, le sélecteur global `*, *::before,
+     *::after { transition-duration: 0.01ms !important }` (Phase 1) s'applique à cet élément
+     comme à tout autre (`transition-duration` est un raccourci décomposé du `transition`
+     inline, et une règle `!important` de feuille de style l'emporte sur un style inline non
+     `!important` dans l'ordre de cascade CSS).
+   - Aucune classe Tailwind `transition-*`/`animate-*`/`duration-*`/`ease-*` trouvée nulle part
+     ailleurs dans `src/` (recherche par motif, 0 résultat) — Header, Footer, Button, cartes,
+     etc. n'ont aucune transition CSS résiduelle en dehors des deux mécanismes ci-dessus.
+   - La boucle `requestAnimationFrame` du shader WebGL lui-même (mouvement continu piloté par
+     JS, pas par CSS) est déjà entièrement gatée par la même vérification `HeroBackground`
+     (jamais montée) + une seconde vérification redondante en tête de `HeroCanvas.tsx` — non
+     concernée par les media queries CSS de toute façon (JS, pas CSS), mais déjà neutralisée à
+     la source depuis la Phase 4.
+
+**Conclusion** : aucun oubli réel trouvé. Le seul point non documenté nommément avant cette
+phase (la transition d'opacité de `HeroCanvas.tsx`) était déjà correctement neutralisé par
+deux mécanismes indépendants préexistants — corrigé ici uniquement au niveau de la
+documentation (ce paragraphe), aucun changement de code nécessaire sur ce point précis.
+
+### Livrable 2 — Transitions de page fluides entre les 5 pages
+
+**Décision technique** : API navigateur native `document.startViewTransition`, **pas** le
+composant expérimental `<ViewTransition>` de React mis en avant par la documentation Next.js
+16 embarquée (`node_modules/next/dist/docs/01-app/02-guides/view-transitions.md`) — vérifié
+que ce composant nécessite `react@canary` (`Object.keys(require('react'))` sur la version
+installée, `19.2.8` stable, ne l'expose pas ; confirmé aussi par `csstype`/`@types/react`
+inchangés). Monter en canary aurait été un changement de dépendance cœur risqué et non
+réversible facilement, hors périmètre d'un chantier de "polish" — non fait. À la place :
+implémentation manuelle avec l'API bas niveau du navigateur, **zéro dépendance ajoutée**
+(`package.json` strictement inchangé), technique équivalente à celle utilisée en interne par
+la librairie `next-view-transitions` que le brief demande justement d'éviter en tant que
+dépendance.
+
+**Ce qui est fait** :
+1. **`src/components/layout/ViewTransitionRouter.tsx`** (nouveau, `'use client'`, ne rend
+   rien) : un unique listener `click` en phase de capture sur `document` intercepte les clics
+   sur les liens internes avant le handler de `next/link` (qui renonce à sa propre navigation
+   si `event.defaultPrevented`, comportement documenté par Next.js). Filtre systématiquement :
+   liens externes (origin différente — WhatsApp, mailto), clics modifiés (ouverture nouvel
+   onglet), ancres internes à la même page (`/services#slug` depuis `/services`), et
+   `prefers-reduced-motion: reduce` **revérifié à chaque clic** (l'utilisateur peut changer ce
+   réglage OS en cours de visite, même pattern que `HeroBackground.tsx` en Phase 4). Si aucune
+   de ces conditions ne bloque, `event.preventDefault()` + `document.startViewTransition(...)`
+   englobant `router.push()` (encapsulé dans `startTransition`) ; la promesse retournée au
+   navigateur n'est résolue qu'une fois que `pathname` a réellement changé (effet séparé sur
+   `usePathname()`), pas immédiatement après l'appel — sinon le navigateur capturerait l'état
+   "après" avant que React ait fini de commiter le nouveau contenu.
+2. **Fallback propre** : si `'startViewTransition' in document` est faux, l'effet ne pose
+   aucun listener — navigation `<Link>` de Next.js strictement inchangée, aucune erreur.
+3. **Ancrage Header/Footer** (`style={{ viewTransitionName: 'site-header' }}` /
+   `'site-footer'`, ajout d'une seule ligne dans `Header.tsx`/`Footer.tsx` — Server Components
+   non modifiés autrement) : sans ça, le crossfade racine par défaut du navigateur ferait
+   clignoter le header/footer à chaque navigation alors qu'ils ne sont jamais réellement
+   démontés (ils vivent dans `RootLayout`, hors de `{children}`) — technique documentée
+   officiellement par Next.js (même fichier de doc cité plus haut, section "Anchoring the
+   header"), neutralisée en CSS (`globals.css`, nouveau bloc `@supports (view-transition-name:
+   none)`).
+4. **`globals.css`** : nouveau token `--dur-page-transition: 320ms` (distinct de
+   `--dur-reveal`, sémantique différente), durée/easing du crossfade racine
+   (`::view-transition-old(root)`/`::view-transition-new(root)`), neutralisation
+   header/footer, `::view-transition { pointer-events: none }` (laisse passer les clics
+   pendant l'overlay UA). Défense en profondeur `prefers-reduced-motion` sur les
+   pseudo-éléments `::view-transition-*` (redondante avec la garde JS, même logique "double
+   garde" qu'en Phase 4).
+5. **`layout.tsx`** : `<ViewTransitionRouter />` monté une fois, juste avant `<Header />`.
+   Aucune modification des 5 `page.tsx`, aucune modification des usages de `<Link>` existants
+   dans `Header.tsx`/`Footer.tsx`/ailleurs — interception centralisée, empreinte minimale.
+
+**Support navigateur réel (pas seulement lu dans la doc)** : recherche vérifiée le 2026-08-29
+— contrairement à `animation-timeline: view()` (Phase 2, toujours derrière un flag en Firefox
+stable à cette date), les transitions "same-document" utilisées ici sont supportées nativement
+par Chrome/Edge 111+, Safari 18+ **et Firefox 133+**. Confirmé par un test Playwright/Firefox
+réel (voir Tests ci-dessous), pas une simple lecture de documentation — le fallback reste
+néanmoins non négociable pour les navigateurs plus anciens.
+
+### Livrable 3 — Test de crawlabilité HTML brut vs rendu (accueil)
+
+Script Playwright dédié (scratchpad de session) : récupère le HTML brut de `/` via une requête
+HTTP simple (`http.get`, aucune exécution JS — équivalent à un crawler qui n'exécute pas de
+JavaScript), puis le rendu final via un navigateur réel après hydratation complète
+(`waitUntil: 'networkidle'` + marge de 500ms). Comparaison programmatique (pas une relecture
+visuelle) de deux choses :
+- **10 chaînes de contenu marketing réel** (kicker, accroche h1, les 2 CTA, les 4 chiffres
+  clés, 3 titres de services) : **100 % présentes identiquement** dans le HTML brut et dans le
+  rendu final — 0 divergence.
+- **Tous les liens internes** (`href` commençant par `/`) : **21 liens internes trouvés dans
+  le HTML brut, 21 dans le rendu final, ensembles strictement identiques** (0 lien présent
+  dans un seul des deux).
+
+Seule différence détectée en première passe (longueur totale du texte : 3541 caractères brut
+contre 3506 rendu) : **investiguée, pas ignorée** — un diff mot-par-mot a montré qu'il s'agit
+uniquement d'un artefact du script de comparaison lui-même (extraction de texte par regex
+grossière, volontairement sans dépendance de parsing HTML ajoutée), qui ne décode pas
+l'entité HTML `&#x27;` (apostrophe) présente dans le HTML brut servi par le serveur, alors que
+`page.content()` de Playwright renvoie l'apostrophe déjà décodée après rendu navigateur.
+Vérifié directement dans le HTML brut (`grep -o "l&#x27;intelligence"` → présent) : c'est le
+même texte réel (« l'intelligence... »), seul son encodage diffère selon l'outil qui le lit,
+aucune divergence de contenu affiché à l'utilisateur ou à un crawler.
+
+**Conclusion T3 (Phase 5)** : confirmé et documenté ici, 100 % du contenu marketing testé
+(texte, liens, CTA, chiffres) est identique entre le HTML brut initial (avant hydratation) et
+le rendu final de la page d'accueil, aucune divergence réelle trouvée.
+
+### Livrable 4 — Test de performance
+
+**Rapport de tailles de bundle Next.js** : `npm run build` (Turbopack, Next.js 16.3.3) ne
+produit **pas** le tableau classique "Route / Size / First Load JS" des builds Webpack
+historiques — Turbopack n'imprime que la liste des routes et leur statut (`○ Static`), sans
+colonne de taille. Constaté ici, pas supposé (sortie complète du build inspectée). Solution
+retenue (déjà utilisée en Phase 4 pour ce même motif, poussée plus loin ici) : mesure directe
+via trace réseau d'un navigateur réel (Playwright/Chromium, `npm run build && npm run start`)
+sur les 5 pages, plutôt qu'une lecture supposée d'un manifeste interne Turbopack non documenté
+publiquement.
+
+| Page | Fichiers JS chargés au premier rendu | Poids total (octets réels transférés) | Chunk OGL/HeroCanvas chargé ? |
+|---|---|---|---|
+| `/` | 10 | 521,3 Ko | Non |
+| `/services` | 8 | 474,8 Ko | Non |
+| `/realisations` | 8 | 474,8 Ko | Non |
+| `/a-propos` | 8 | 474,8 Ko | Non |
+| `/contact` | 8 | 474,8 Ko | Non |
+
+Non-gzippé (taille sur le fil, `next start` ne compresse pas par défaut sans reverse-proxy —
+un déploiement réel avec compression apporterait un gain significatif, cohérent avec les
+chiffres gzip déjà mesurés en Phase 4 : ~30 % de la taille brute pour ce type de contenu JS).
+**Confirmation de non-régression Phase 4** : le chunk contenant OGL/`HeroCanvas` (identifié par
+recherche du code source dans `.next/static/chunks/*.js`) n'est chargé au premier rendu
+d'**aucune** des 5 pages, y compris l'accueil — le lazy-load reste intact après l'ajout des
+transitions de page. Le nouveau code de `ViewTransitionRouter.tsx` a été localisé dans le
+chunk `3244osfa5xh59.js` (~39 Ko brut / ~12 Ko gzippé) : partagé par toutes les pages (monté
+dans `RootLayout`), poids proportionné à ce qu'il fait (un seul listener + une fonction).
+
+**Audit Lighthouse local (mobile)** : exécuté réellement (`npx lighthouse`, v13.4.1, disponible
+via npx sans installation permanente — pas ajouté à `package.json`), sur `npm run start` en
+local, profil mobile par défaut (limitation CPU 4x + réseau simulé "Slow 4G").
+
+| Page | Score Performance | FCP | LCP | TBT | CLS | Interactive |
+|---|---|---|---|---|---|---|
+| `/` | 0.65 | 2.8 s | 2.8 s | 980 ms | 0 | 6.0 s |
+| `/services` | 0.73 | 2.7 s | 2.7 s | 730 ms | 0.001 | 4.7 s |
+
+**Lecture honnête de ces chiffres (à ne pas prendre pour une mesure de production)** : le CLS
+est excellent (quasi nul sur les deux pages, cohérent avec l'approche HTML-first/pas de
+layout shift lié aux reveals ou au lazy-load). Le score Performance et le TBT sont modestes,
+mais mesurés sur un serveur `next start` local non optimisé (pas de CDN, pas de compression
+HTTP, pas de cache Edge, machine de développement partagée avec d'autres processus), sous le
+throttling CPU/réseau agressif du profil mobile par défaut de Lighthouse — le
+`mainthread-work-breakdown` mesuré (14,9 s) et le `bootup-time` (3,1 s) sont démesurés par
+rapport à un vrai device mobile moderne, signe que le facteur limitant ici est l'environnement
+de test local, pas nécessairement le code applicatif. Non comparable à un déploiement réel
+(Vercel Edge ou équivalent), qui reste hors périmètre de ce projet. **Piste identifiée mais
+non traitée dans ce jalon** (hors périmètre des 5 livrables listés, à re-mesurer une fois un
+déploiement réel disponible) : `unused-javascript` signale ~23 Ko d'estimation d'économie
+possible sur l'accueil — pas assez significatif pour justifier un chantier de code-splitting
+supplémentaire à ce stade.
+
+### Livrable 5 — Nettoyage final de la documentation
+
+Ce document (`PROGRESS.md`) et `README.md` relus en entier. Corrections apportées :
+- La mention Phase 5/`prefers-reduced-motion` déjà identifiée comme imprécise (section "Ce qui
+  reste (Phases 2 à 5)" plus haut) reformulée pour refléter que la Phase 5 est terminée et
+  pointer vers ce jalon.
+- `README.md` : paragraphe d'introduction et section "Décisions techniques" mis à jour pour
+  mentionner la Phase 5 terminée, la nouvelle dépendance nulle (aucun package ajouté), et le
+  composant `ViewTransitionRouter.tsx` dans la structure du projet (voir diff de ce fichier).
+
+### Tests exécutés (résultats)
+
+1. **`npm run lint`** : 0 erreur, 0 avertissement.
+2. **`npm run build`** : succès, TypeScript strict compilé sans erreur. Les 5 pages +
+   `sitemap.xml` + `robots.txt` restent toutes `○ (Static)` — aucune régression SSG/T1 due aux
+   transitions de page.
+3. **`curl` HTML brut sur les 5 pages** (`npm run start -p 3102`) : contenu réel confirmé
+   présent sans régression — 4 chiffres clés de l'accueil, 6 titres de services, les 3 cas
+   `/realisations` (Jeefox/WingoAI/Twilio), `Cotonou`/`à compléter` sur `/a-propos`, les 4
+   champs HTML natifs du formulaire sur `/contact`, `comeup.com/fr/service` toujours à 0
+   occurrence sur les 5 pages. Reveals Phase 2/3 toujours présents en nombre (26 occurrences
+   `class="reveal"` sur l'accueil, 16 sur `/realisations`) — non-régression confirmée, pas
+   juste "toujours là" mais en quantité cohérente avec les phases précédentes. `<canvas>`
+   toujours absent du HTML brut de l'accueil (0 occurrence) — lazy-load WebGL non régressé.
+4. **Test fonctionnel `prefers-reduced-motion` réel** (Playwright/Chromium, émulation
+   `reducedMotion: 'reduce'`, pas une relecture de code) sur 3 pages représentatives :
+   - Accueil : 31 éléments `.reveal`/`.reveal-word`/`.stat-counter` — tous `opacity: 1`,
+     `transform: none`, `animationName: none`.
+   - `/services` : 13 éléments — même résultat, 0 anomalie.
+   - `/contact` : 10 éléments — même résultat, 0 anomalie.
+   - Navigation avec `reducedMotion: 'reduce'` actif : clic sur un lien de nav interne →
+     **0 appel à `document.startViewTransition`** (vérifié en instrumentant la fonction
+     elle-même, pas une supposition) — navigation Next.js standard exécutée à la place,
+     `pathname` change correctement.
+5. **Test fonctionnel des transitions de page réel** (Playwright/Chromium, sans émulation
+   reduced-motion) : clic sur un lien de nav interne → **exactement 1 appel** à
+   `document.startViewTransition`, navigation aboutit au bon `pathname`,
+   `getComputedStyle(header).viewTransitionName === 'site-header'` confirmé sur la page
+   rendue.
+6. **Test fallback Firefox réel** (Playwright/Firefox) : navigation par clic aboutit au bon
+   `pathname`, **0 erreur JS** capturée pendant la navigation (`page.on('pageerror')`).
+   Support `startViewTransition` confirmé présent dans le Firefox testé (133+, cohérent avec
+   la vérification faite en amont, voir livrable 2) — le chemin "support natif" a donc
+   réellement été exercé ici, pas seulement le chemin de repli.
+7. **`git status` (`novatrix-web`)** avant/après : fichiers modifiés/ajoutés attendus
+   uniquement — voir liste en fin de section. **`git -C ../novatrix status`** avant et après :
+   `working tree clean` dans les deux cas, aucun fichier de `novatrix/` modifié.
+
+### Fichiers modifiés/ajoutés (Phase 5)
+
+- Nouveau : `src/components/layout/ViewTransitionRouter.tsx`.
+- Modifiés (additifs uniquement) : `src/app/globals.css` (tokens + blocs `@supports
+  (view-transition-name: none)` et défense reduced-motion pour les transitions de page),
+  `src/app/layout.tsx` (montage de `ViewTransitionRouter`), `src/components/layout/Header.tsx`
+  et `src/components/layout/Footer.tsx` (ajout `style={{ viewTransitionName: ... }}`),
+  `PROGRESS.md`, `README.md`.
+- **Aucune modification** de `package.json`/`package-lock.json` (livrable 2 sans nouvelle
+  dépendance), d'aucun des 5 `page.tsx`, de `ContactForm.tsx`/`contact/actions.ts`, ni
+  d'aucun fichier de `src/lib/content/*`.
+
+### Contrôles non exécutés (et pourquoi)
+
+- **Safari/WebKit réel pour les transitions de page** : non testé en émulation dédiée dans cet
+  environnement (même limite que les phases précédentes). Safari 18+ supporte nativement les
+  same-document view transitions (vérifié via recherche croisée le 2026-08-29, livrable 2) —
+  attendu fonctionnel par cohérence avec Chromium, non vérifié par un test réel faute de moteur
+  WebKit disponible ici au-delà de ce que Playwright peut émuler sans garantie de fidélité
+  totale à Safari réel.
+- **Device mobile physique réel pour Lighthouse** : non exécutable dans cet environnement
+  (même limite que toutes les phases précédentes) — les chiffres Lighthouse rapportés
+  ci-dessus proviennent d'une simulation logicielle sur machine de développement, avec les
+  réserves déjà indiquées au livrable 4.
+- **Mesure Lighthouse en conditions de déploiement réel (CDN, HTTP/2, compression)** : hors
+  périmètre (aucun déploiement effectué, cf. garde-fous). Les chiffres actuels ne doivent pas
+  être interprétés comme représentatifs d'un site en production.
+- **Tests automatisés persistants (Vitest/Playwright en CI)** : même choix que toutes les
+  phases précédentes — scripts de vérification laissés dans le scratchpad de session, pas
+  ajoutés au projet (`package.json` toujours sans dépendance de test).
+
+### Synthèse finale du projet — novatrix-web
+
+Les **5 phases du brief sont terminées** : Phase 1 (fondations HTML-first, contenu réel,
+formulaire fonctionnel), Phase 2 (structure, bento grid, reveals CSS légers,
+`prefers-reduced-motion`), Phase 3 (storytelling portfolio en cascade), Phase 4 (hero WebGL
+OGL lazy-loadé avec garde reduced-motion), Phase 5 (audit d'accessibilité complet, transitions
+de page natives, vérification crawlabilité et performance, nettoyage documentaire).
+
+**Le site novatrix-web est prêt pour une revue humaine.** Les points suivants restent
+explicitement hors périmètre de ce travail autonome et nécessitent une décision/donnée du
+client avant publication définitive :
+1. **Compte Sanity (ou CMS équivalent) non fourni** : le contenu reste dans une couche locale
+   typée (`src/lib/content/*.ts`), prête à migrer sans toucher aux composants d'affichage une
+   fois un compte/organisation fourni.
+2. **Section équipe/témoignages/chiffres clés à reconfirmer** : l'équipe est affichée comme
+   "à compléter" (aucun nom inventé) ; les 4 chiffres clés et les témoignages proviennent de
+   sources partielles/recoupées documentées en Phase 1, à valider formellement par le client
+   avant publication.
+3. **Bascule production/DNS hors périmètre** : aucun déploiement, aucun changement DNS, aucune
+   action externe n'a été effectuée sur ce projet ni sur `../novatrix/` (site Nuxt actuel,
+   toujours en production, jamais touché).

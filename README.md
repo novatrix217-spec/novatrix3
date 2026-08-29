@@ -4,9 +4,12 @@ Refonte du site vitrine NovatrixAI. **Phase 1 — Fondations** (scaffolding, con
 correction des bugs identifiés dans le brief), **Phase 2 — Structure & animations légères**
 (bento grid Services, reveals CSS natifs au scroll, comptage animé des stats,
 `prefers-reduced-motion`), **Phase 3 — Storytelling portfolio** (reveal en cascade par étape
-narrative) et **Phase 4 — Effet signature WebGL du hero** (shader OGL réactif au curseur, en
-couche additive lazy-loadée) sont terminées. Voir `PROGRESS.md` pour le détail des jalons,
-décisions et provenance des données.
+narrative), **Phase 4 — Effet signature WebGL du hero** (shader OGL réactif au curseur, en
+couche additive lazy-loadée) et **Phase 5 — Polish & accessibilité** (audit
+`prefers-reduced-motion` exhaustif sur tout le site, transitions de page natives entre les 5
+pages, vérification crawlabilité brut/rendu, test de performance) sont **toutes terminées** —
+c'était la dernière phase du brief. Voir `PROGRESS.md` pour le détail des jalons, décisions et
+provenance des données, ainsi que la synthèse finale du projet en fin de fichier.
 
 Ce projet est indépendant de `../novatrix/` (site Nuxt actuel, en production, avec son propre
 dépôt git). Il n'y a aucune dépendance de code entre les deux ; `../novatrix/` n'a pas été
@@ -30,7 +33,8 @@ modifié pour ce travail.
 ```
 src/
   app/
-    layout.tsx           racine : polices (next/font/google), métadonnées, Header/Footer
+    layout.tsx           racine : polices (next/font/google), métadonnées, Header/Footer,
+                          ViewTransitionRouter (transitions de page, Phase 5)
     globals.css           design tokens (couleurs, radius, typo, container, rythme vertical)
     page.tsx               Accueil
     services/page.tsx      Services
@@ -40,7 +44,7 @@ src/
     contact/actions.ts      Server Action de traitement du formulaire (stub documenté)
     sitemap.ts, robots.ts
   components/
-    layout/    Header, Footer
+    layout/    Header, Footer, ViewTransitionRouter (transitions de page natives, Phase 5)
     ui/        Container, Section, Kicker, Button, StatCard, WhatsAppCta, RevealTitle
     sections/  Hero (+ HeroBackground/HeroCanvas, effet WebGL Phase 4), StatsStrip,
                ServicesGrid, Testimonials, TeamSection, ProjectCaseStudy
@@ -214,6 +218,24 @@ anticipée ici.
 
 Détail de l'implémentation, des garde-fous (HTML-first, lazy-load, `prefers-reduced-motion`,
 fallback WebGL silencieux) et des tests : voir `PROGRESS.md` > Jalon Phase 4.
+
+### 10. Transitions de page (Phase 5) : API View Transitions native, pas `<ViewTransition>` de React
+
+Next.js 16 documente en interne (`node_modules/next/dist/docs/01-app/02-guides/
+view-transitions.md`) le composant expérimental `<ViewTransition>` de React comme façon
+"zéro-config" de faire des transitions de page dans l'App Router. Vérifié concrètement que ce
+composant **nécessite `react@canary`** et n'est pas exposé par la version stable installée ici
+(`react@19.2.8` — `Object.keys(require('react'))` ne contient pas `ViewTransition`). Monter
+`react`/`react-dom` en canary aurait été un changement de dépendance cœur risqué pour un
+chantier de "polish" en fin de projet — non fait.
+
+**Décision retenue** : implémentation manuelle avec l'API navigateur native
+`document.startViewTransition`, zéro dépendance ajoutée (`package.json` inchangé), dans un
+unique composant `src/components/layout/ViewTransitionRouter.tsx` qui intercepte les clics sur
+les liens internes (technique équivalente à celle utilisée en interne par la librairie
+`next-view-transitions`, volontairement non installée). Fallback silencieux si l'API n'existe
+pas dans le navigateur, garde `prefers-reduced-motion` revérifiée à chaque clic. Détail complet
+et résultats des tests réels (Chromium + Firefox) : voir `PROGRESS.md` > Jalon Phase 5.
 
 ## Contenu réel — où sont les sources
 
