@@ -1,6 +1,7 @@
 import { ButtonLink } from '@/components/ui/Button'
 import { WhatsAppCta } from '@/components/ui/WhatsAppCta'
 import { Container } from '@/components/ui/Container'
+import { revealStyle } from '@/lib/reveal'
 
 /**
  * Hero de l'accueil — seule section du site autorisée à utiliser la palette
@@ -26,11 +27,16 @@ export function Hero() {
     >
       <Container className="grid min-h-[560px] items-center gap-10 py-20 lg:grid-cols-[1.1fr_.9fr] lg:py-28">
         <div>
-          <p className="kicker text-white/70">Révolutionnez votre futur avec NovatrixAI</p>
-          <h1 className="text-display font-display mt-5 max-w-2xl font-bold text-white">
+          <p className="reveal kicker text-white/70" style={revealStyle(0, 8)}>
+            Révolutionnez votre futur avec NovatrixAI
+          </p>
+          <h1
+            className="reveal text-display font-display mt-5 max-w-2xl font-bold text-white"
+            style={revealStyle(80, 12)}
+          >
             Innover. Automatiser. Performer.
           </h1>
-          <p className="text-body-lg mt-6 max-w-xl text-white/80">
+          <p className="reveal text-body-lg mt-6 max-w-xl text-white/80" style={revealStyle(160, 16)}>
             Chez NovatrixAI, nous vous accompagnons dans l&rsquo;intégration des technologies de
             pointe pour atteindre vos objectifs stratégiques. Notre objectif : transformer vos
             idées en solutions concrètes qui améliorent immédiatement votre performance.

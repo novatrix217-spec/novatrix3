@@ -1,13 +1,17 @@
 import type { ProjectCaseStudy } from '@/lib/content/types'
+import { revealStyle, staggerDelay } from '@/lib/reveal'
 
 /**
  * Structure HTML storytelling problème → solution → résultat (brief, livrable Phase 1
- * point 7). Le reveal animé au scroll viendra en Phase 3 — ici uniquement la structure
- * HTML/contenu, sans transition ni animation (T2 : rester HTML-first à ce stade).
+ * point 7). Phase 2 : reveal CSS natif ajouté (patron "carte", translateY 12px), stagger
+ * +80ms par carte plafonné à l'index 2 (3 cas d'usage réels au total, cf. projects.ts).
  */
-export function ProjectCaseStudyBlock({ project }: { project: ProjectCaseStudy }) {
+export function ProjectCaseStudyBlock({ project, index = 0 }: { project: ProjectCaseStudy; index?: number }) {
   return (
-    <article className="rounded-xl border border-border-subtle bg-elevated p-8 shadow-[var(--elev-2)]">
+    <article
+      style={revealStyle(staggerDelay(index, 80, 2), 12)}
+      className="reveal rounded-xl border border-border-subtle bg-elevated p-8 shadow-[var(--elev-2)]"
+    >
       <p className="kicker text-accent">{project.category}</p>
       <h3 className="text-h2 font-display mt-3 font-bold text-text-primary">{project.title}</h3>
       {project.client && <p className="text-small mt-1 text-text-secondary">Client : {project.client}</p>}

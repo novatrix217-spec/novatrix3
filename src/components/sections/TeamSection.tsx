@@ -1,5 +1,6 @@
 import { teamMembers, teamPlaceholderNote } from '@/lib/content/team'
 import { siteConfig } from '@/lib/content/site'
+import { revealStyle, staggerDelay } from '@/lib/reveal'
 
 /**
  * Section équipe/fondateurs (brief, livrable Phase 1 point 6). Aucune identité
@@ -10,7 +11,10 @@ import { siteConfig } from '@/lib/content/site'
 export function TeamSection() {
   if (teamMembers.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-border-strong bg-surface p-8 text-center">
+      <div
+        style={revealStyle(0, 10)}
+        className="reveal rounded-lg border border-dashed border-border-strong bg-surface p-8 text-center"
+      >
         <p className="text-h3 font-display font-bold text-text-primary">Portraits de l&rsquo;équipe à compléter</p>
         <p className="text-body mt-3 mx-auto max-w-xl text-text-secondary">{teamPlaceholderNote}</p>
         <p className="text-small mt-4 text-text-secondary">
@@ -22,8 +26,12 @@ export function TeamSection() {
 
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {teamMembers.map((member) => (
-        <div key={member.id} className="rounded-lg border border-border-subtle bg-elevated p-6 text-center">
+      {teamMembers.map((member, index) => (
+        <div
+          key={member.id}
+          style={revealStyle(staggerDelay(index, 80, 3), 10)}
+          className="reveal rounded-lg border border-border-subtle bg-elevated p-6 text-center"
+        >
           <p className="text-h3 font-display font-bold text-text-primary">{member.name ?? 'À compléter'}</p>
           <p className="text-small mt-1 text-text-secondary">{member.role ?? 'Rôle à compléter'}</p>
           {member.bio && <p className="text-small mt-3 text-text-secondary">{member.bio}</p>}
