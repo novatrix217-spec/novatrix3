@@ -82,8 +82,7 @@ sanctionnée par le brief lui-même et un recoupement partiel.
 
 - **Phase 2** : **terminée**, voir la section dédiée ci-dessous. Bascule dark mode réelle
   reportée (hors périmètre des livrables Phase 2 explicitement listés).
-- **Phase 3** : refonte du storytelling portfolio avec reveal progressif au scroll (la
-  structure HTML problème/solution/résultat livrée en Phase 1 est le socle de cette étape).
+- **Phase 3** : **terminée**, voir la section dédiée ci-dessous.
 - **Phase 4** : effet signature WebGL/shader sur le hero (OGL ou Three.js/R3F selon
   complexité retenue), en couche additive au-dessus du HTML déjà complet.
 - **Phase 5** : `prefers-reduced-motion` appliqué aux animations ajoutées en phases 2-4 (la
@@ -361,3 +360,91 @@ Phase 2, corrigés le même jour (2026-08-29) :
 
 `npm run lint` et `npm run build` ré-exécutés après ces deux correctifs : toujours 0 erreur,
 5 pages + sitemap + robots toujours `○ (Static)`.
+
+## Jalon : Phase 3 — Storytelling portfolio (terminée)
+
+Date : 2026-08-29.
+
+### Ce qui est fait
+
+`ProjectCaseStudyBlock` (`src/components/sections/ProjectCaseStudy.tsx`) fait maintenant
+reveal en cascade au grain **étape narrative** plutôt qu'au grain **carte entière** posé en
+Phase 2. Le conteneur `<article>` (bordure/fond/ombre) reste statique et immédiatement
+visible ; ce sont les 4 blocs de contenu — accroche (kicker + titre + client), Problème,
+Solution, Résultat — qui portent chacun `className="reveal"` avec un délai propre, calculé
+par `stepDelay(step) = staggerDelay(index, 80, 2) + staggerDelay(step, 100, 3)` :
+- `staggerDelay(index, 80, 2)` : écart carte à carte, **inchangé** depuis la Phase 2.
+- `staggerDelay(step, 100, 3)` : nouvel écart étape à étape au sein d'une même carte
+  (0 = accroche, 1 = problème, 2 = solution, 3 = résultat).
+
+Aucune nouvelle primitive : réutilisation stricte de `revealStyle`/`staggerDelay`
+(`src/lib/reveal.ts`), des custom properties `--reveal-y`/`--reveal-delay`, de la classe
+`.reveal` et de ses tokens `--ease-brand`/`--dur-reveal`/`animation-timeline: view()` déjà
+posés dans `globals.css` en Phase 2 — CSS natif uniquement, aucun GSAP (aucun besoin identifié
+qui l'aurait justifié pour ce périmètre). Les libellés d'étape (`<h4>Problème/Solution/
+Résultat</h4>`, mono/uppercase) préexistants en Phase 1 jouent déjà le rôle d'accroche par
+étape et n'ont pas été modifiés. **Aucune donnée touchée** : `src/lib/content/projects.ts`
+(source des 3 cas, Phase 1) n'a reçu aucune modification — aucun chiffre ajouté, retiré ou
+inventé.
+
+### Preuve de la cascade (mesures réelles, pas une relecture de code)
+
+Script Playwright/Chromium (scratchpad de session, non ajouté au dépôt), scroll fin (pas de
+2 px) sur la 3ᵉ carte (`#site-vitrine-agence-wingoai`), lecture de `getComputedStyle(...).opacity`
+sur les 4 blocs à chaque position de scroll :
+- Bloc accroche (delay=160ms) : transition complète entre `scrollY` 516 → 544
+  (`opacity` 0 → 1), **terminée avant** que les 3 autres blocs ne commencent.
+- Blocs Problème/Solution/Résultat (delay=260/360/460ms) : `opacity=0` jusqu'à `scrollY≈660`,
+  puis transition. À `scrollY=662-684`, capturés à des stades différents dans le même ordre
+  que leurs délais : **Problème=0.96 > Solution=0.93 > Résultat=0.89**. Transition complète à
+  `scrollY≈686`.
+
+Ces valeurs confirment que les 4 blocs révèlent indépendamment (2 groupes temporels nets, le
+second lui-même échelonné en 3 sous-étapes dans le bon ordre), et non la carte entière d'un
+seul bloc. `CSS.supports('animation-timeline','view()')` confirmé `true` dans le navigateur
+de test.
+
+### Tests exécutés (résultats)
+
+1. `npm run lint` : 0 erreur, 0 avertissement.
+2. `npm run build` : succès, TypeScript compilé sans erreur, les 5 pages + `sitemap.xml` +
+   `robots.txt` restent toutes `○ (Static)` (aucune régression T1 due au découpage en blocs
+   animés).
+3. `npm run start` + `curl` brut sur `/realisations` (sans exécution JS) : les 3 cas complets
+   (SMS Shopify+Twilio, Jeefox, WingoAI) présents dans le HTML brut, y compris les chiffres
+   sourcés (`supérieur à 90 %`, `98 %`). 13 `class="reveal"` détectés avec les valeurs
+   `--reveal-delay` attendues pour les 3 cartes : carte 0 → 0/100/200/300 ms, carte 1 →
+   80/180/280/380 ms, carte 2 → 160/260/360/460 ms — conforme exactement à la formule
+   `stepDelay`.
+4. `git diff --stat -- src/lib/content/projects.ts` : vide (fichier non touché, aucun chiffre
+   modifié).
+5. `git -C ../novatrix status` avant et après : `working tree clean` dans les deux cas, aucun
+   fichier de `novatrix/` modifié.
+
+### Décision prise en autonomie — piste future non implémentée
+
+Aucun besoin réel de **nouvel élément visuel** (icône par étape, connecteur/timeline visuel,
+nouvelle couleur sémantique type "problème = alerte / résultat = succès") n'a été identifié
+pour que la cascade fonctionne : le vocabulaire déjà établi (translateY 12 px, délai, `.reveal`)
+suffit à produire un storytelling en cascade lisible, comme le montrent les mesures ci-dessus.
+Conformément à la consigne explicite de cette étape, je ne l'ai donc **pas** implémenté et je
+le note ici comme piste future à considérer, hors périmètre de ce jalon : un connecteur visuel
+léger (ex. ligne verticale reliant les 3 colonnes Problème/Solution/Résultat, ou une
+numérotation 01/02/03) pourrait renforcer la lecture "étapes d'un même récit" au-delà du simple
+décalage temporel — décision de design system à valider séparément (`designer-ui-ux`/
+`architecte-systeme`), pas une décision unilatérale d'implémentation.
+
+### Contrôles non exécutés (et pourquoi)
+
+- **Safari/WebKit et Firefox en émulation dédiée pour ce changement précis** : non ré-exécutés
+  spécifiquement sur ce diff — le mécanisme réutilise à l'identique la garde `@supports
+  (animation-timeline: view())` déjà validée en Phase 2 (Chromium supporté / Firefox stable non
+  supporté, testés à cette occasion-là), donc aucun nouveau risque de compatibilité introduit
+  par ce changement (mêmes classes, mêmes propriétés CSS, appliquées à des éléments
+  supplémentaires).
+- **`prefers-reduced-motion` spécifique à ce changement** : non re-testé isolément — la règle
+  globale déjà en place dans `globals.css` s'applique automatiquement à toute classe `.reveal`,
+  y compris les nouveaux blocs, sans modification de cette règle.
+- **Tests automatisés persistants** : script Playwright de vérification resté dans le
+  scratchpad de session, non ajouté comme dépendance permanente du projet (même choix qu'en
+  Phase 2, `package.json` inchangé).
