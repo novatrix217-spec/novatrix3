@@ -281,8 +281,9 @@ Date : 2026-08-29.
      reseaux-sociaux → agent-administratif → wordpress`) est confirmé dans l'ordre du DOM
      rendu (indices croissants dans le HTML), et les classes de placement de la tuile
      `saas-ia` (`sm:col-span-2 lg:col-span-2 lg:row-span-2`, `border-accent/40
-     shadow-[var(--elev-2)] sm:border-border-subtle sm:shadow-[var(--elev-1)]`, `<h2>`) sont
-     bien celles attendues.
+     shadow-[var(--elev-2)] sm:border-border-subtle sm:shadow-[var(--elev-1)]`, élément
+     `<h3>` avec `text-h2 sm:text-h3`) sont bien celles attendues — voir aussi "Correctifs
+     post-validation" ci-dessous, une régression avait fait passer cet élément en `<h2>`.
    - `comeup.com/fr/service` : 0 occurrence sur les 5 pages (non-régression Phase 1).
    - Les 4 champs du formulaire de contact (`name`, `email`, `message`, `consent`) sont
      toujours présents comme attributs HTML natifs.
@@ -321,3 +322,42 @@ Date : 2026-08-29.
   aucune infrastructure de test n'existe encore dans `package.json` (inchangé depuis la
   Phase 1) et en ajouter une est une décision d'architecture qui dépasse le périmètre des 4
   livrables demandés pour cette phase.
+
+### Correctifs post-validation Phase 2
+
+Deux problèmes remontés par une validation indépendante après la livraison initiale de la
+Phase 2, corrigés le même jour (2026-08-29) :
+
+1. **Dégradé du hero invalide — bug réel, sévérité haute, pré-existant depuis la Phase 1**
+   (introduit dans `src/components/sections/Hero.tsx` dès sa création en Phase 1, donc non
+   introduit par les changements Phase 2 sur ce fichier). Le style inline référençait
+   `var(--hero-from)`/`var(--hero-to)`, deux noms de custom properties qui n'ont jamais existé
+   (les tokens réels définis dans `globals.css` sont `--hero-grad-start`/`--hero-grad-end` ;
+   `--hero-from`/`--hero-to` ne sont que les noms des **alias Tailwind** `--color-hero-from`/
+   `--color-hero-to`, pas des variables CSS directement utilisables telles quelles). Un
+   `var()` non résolu sans valeur de repli invalide toute la déclaration `background`, donc le
+   hero retombait sur le fond crème par défaut (`--bg-void`) avec le texte blanc du hero posé
+   dessus par-dessus — contraste catastrophique. Corrigé en remplaçant par les vrais noms de
+   tokens (`var(--hero-grad-start)`, `var(--hero-grad-end)`), cohérent avec `var(--hero-bg)`
+   déjà utilisé sur la même ligne. **Vérifié réellement, pas juste relu** : `getComputedStyle`
+   via Playwright/Chromium sur `/` après le correctif → `backgroundImage:
+   "linear-gradient(135deg, rgb(28, 0, 56) 0%, rgb(109, 40, 217) 55%, rgb(192, 38, 211) 100%)"`
+   (correspond exactement à `--hero-bg`/`--hero-grad-start`/`--hero-grad-end`), plus une
+   capture d'écran réelle confirmant visuellement le dégradé violet/magenta derrière le texte
+   blanc, contraste correct.
+2. **Incohérence sémantique du titre flagship du bento Services** (introduite en Phase 2,
+   `src/components/sections/ServicesGrid.tsx`) : la tuile `saas-ia` était rendue en `<h2>` à
+   toutes les largeurs d'écran (seule la classe `sm:text-h3` faisait varier la taille visuelle,
+   pas l'élément lui-même), en contradiction avec l'intention déjà documentée plus haut dans ce
+   fichier ("l'élément HTML reste un `<h3>` dans tous les cas") — ce qui cassait la hiérarchie
+   de titres de l'accueil (`h1 > h2 "Nos services" > h2 saas-ia + h3×5 autres tuiles`) au lieu
+   d'un plan cohérent `h1 > h2 > h3×6`. Corrigé en repassant l'élément en `<h3>` à toutes les
+   largeurs ; la différenciation visuelle reste assurée uniquement par les classes Tailwind
+   (`text-h2 sm:text-h3` sur la tuile flagship contre `text-h3` sur les 5 autres). **Vérifié
+   réellement** : extraction programmatique du HTML brut de `/` (`npm run build && npm run
+   start` + `curl`) — le titre de la tuile `saas-ia` est bien rendu
+   `<h3 class="... text-h2 sm:text-h3">`, plan de titres de l'accueil désormais `h1 > h2×4 >
+   h3×9` (6 tuiles Services + 3 cartes réalisations/témoignages), aucun `<h2>` parasite.
+
+`npm run lint` et `npm run build` ré-exécutés après ces deux correctifs : toujours 0 erreur,
+5 pages + sitemap + robots toujours `○ (Static)`.
