@@ -41,14 +41,13 @@ src/
     realisations/page.tsx  Réalisations (storytelling problème/solution/résultat)
     a-propos/page.tsx      À propos (+ section équipe)
     contact/page.tsx        Contact (formulaire + WhatsApp)
-    contact/actions.ts      Server Action de traitement du formulaire (stub documenté)
-    sitemap.ts, robots.ts
+    sitemap.ts, robots.ts   (dynamic = 'force-static', requis par output: 'export')
   components/
     layout/    Header, Footer, ViewTransitionRouter (transitions de page natives, Phase 5)
     ui/        Container, Section, Kicker, Button, StatCard, WhatsAppCta, RevealTitle
     sections/  Hero (+ HeroBackground/HeroCanvas, effet WebGL Phase 4), StatsStrip,
                ServicesGrid, Testimonials, TeamSection, ProjectCaseStudy
-    forms/     ContactForm (client component, useActionState)
+    forms/     ContactForm (client component, validation + soumission 100% client)
   lib/
     content/  couche de données locale (services, projets, témoignages, stats, équipe, site)
     reveal.ts  helpers Phase 2 pour les reveals CSS (style inline --reveal-y/--reveal-delay,
@@ -73,8 +72,9 @@ de la chorégraphie et les résultats des tests réels (Playwright, Chromium + F
 
 ```bash
 npm run dev     # serveur de développement (Turbopack)
-npm run build   # build de production (SSG des 5 pages)
-npm run start   # sert le build de production
+npm run build   # export HTML statique complet (output: 'export') dans out/, un .html par page
+npm run start   # ne fonctionne plus tel quel après le passage à l'export statique — voir
+                # "Consulter l'export statique en local" ci-dessous pour servir out/
 npm run lint    # ESLint
 ```
 
@@ -86,6 +86,69 @@ npm install
 npm run dev
 # http://localhost:3000
 ```
+
+## Export statique (`output: 'export'`)
+
+Le site est configuré en export HTML statique complet (`next.config.ts` :
+`output: 'export'`, `images.unoptimized: true`). `npm run build` ne démarre plus de serveur
+Next.js de production : il génère directement un dossier `out/` contenant un fichier `.html`
+par page (`out/index.html`, `out/services.html`, `out/realisations.html`, `out/a-propos.html`,
+`out/contact.html`), plus `out/robots.txt`, `out/sitemap.xml`, `out/404.html` et les assets
+statiques (`_next/static/`, `brand/`).
+
+```bash
+npm run build
+# dossier out/ généré
+```
+
+### Consulter/servir l'export en local
+
+`npm start` (`next start`) ne s'applique plus : il n'y a plus de serveur Next.js à démarrer,
+seulement des fichiers statiques à servir. Utiliser n'importe quel serveur de fichiers
+statiques, par exemple (aucune dépendance ajoutée au projet, `npx` télécharge l'outil à la
+volée) :
+
+```bash
+npx serve out
+# http://localhost:3000 (ou le port indiqué)
+```
+
+### Pourquoi ce changement, et ce qu'il désactive
+
+Demandé explicitement par le client, en connaissance de cause que cela **désactive les
+Server Actions** (Next.js ne supporte pas les Server Actions en export statique — aucun
+serveur Node.js n'exécute de code au moment de la requête, uniquement des fichiers servis
+tels quels). Impact concret unique sur ce projet : le formulaire de contact
+(`src/components/forms/ContactForm.tsx`) utilisait une Server Action
+(`src/app/contact/actions.ts`, désormais supprimé) ; il a été converti en gestion 100% client
+(`onSubmit` + état local React), avec exactement la même validation, les mêmes messages
+d'erreur et le même honeypot anti-bot qu'avant. Voir le commentaire en tête de
+`ContactForm.tsx` pour le détail complet, et "Décisions techniques" > point 11 ci-dessous.
+
+Audit des autres incompatibilités connues de l'export statique Next.js, toutes vérifiées sans
+impact sur ce projet :
+- Pas de `src/app/api/` (aucun Route Handler custom).
+- Pas de `middleware.ts`.
+- Pas de route dynamique `[slug]` (donc pas de `generateStaticParams` manquant à gérer).
+- `src/app/sitemap.ts` et `src/app/robots.ts` (conventions Metadata File) nécessitent
+  `export const dynamic = 'force-static'` en export statique dans cette version de Next.js
+  (16.3.3) — ajouté aux deux fichiers.
+- Le hero WebGL (`src/components/sections/HeroBackground.tsx` → `HeroCanvas.tsx`, chargé en
+  `next/dynamic(..., { ssr: false })`) reste un Client Component prerendu en HTML puis monté
+  après hydratation : comportement inchangé et explicitement supporté par l'export statique.
+  Vérifié avec un test Playwright réel contre l'export servi localement : le `<canvas>` est
+  bien absent du HTML initial (lazy-load non régressé) et un contexte WebGL est bien obtenu
+  après hydratation.
+
+**Risque connu, non bloquant** : en testant la navigation côté client sur l'export servi
+localement (Playwright), le prefetch RSC automatique de `next/link` déclenche des requêtes
+404 (`/services/__next.services.__PAGE__.txt`, etc. — le client construit un chemin `.`
+alors que l'export génère un sous-dossier `/`). La navigation elle-même aboutit correctement
+(contenu réel chargé, 0 erreur JS bloquante) car Next.js retombe sur un fetch normal au clic ;
+seul le prefetch anticipé échoue silencieusement. C'est un détail d'implémentation interne à
+`output: 'export'` sur cette version de Next.js, pas une régression introduite par ce
+changement de configuration — à surveiller si une version ultérieure de Next.js le corrige,
+ou à ignorer si le volume de 404 dans les logs d'hébergement n'est pas gênant.
 
 ## Décisions techniques prises en autonomie
 
@@ -236,6 +299,15 @@ les liens internes (technique équivalente à celle utilisée en interne par la 
 `next-view-transitions`, volontairement non installée). Fallback silencieux si l'API n'existe
 pas dans le navigateur, garde `prefers-reduced-motion` revérifiée à chaque clic. Détail complet
 et résultats des tests réels (Chromium + Firefox) : voir `PROGRESS.md` > Jalon Phase 5.
+
+### 11. Export statique complet (`output: 'export'`) et conversion de la Server Action
+
+Demandé explicitement par le client après la fin des 5 phases du brief, en connaissance de
+cause que cela désactive les Server Actions (annoncé au préalable). Détail complet, audit des
+incompatibilités connues de l'export statique et risque connu (404 de prefetch RSC, non
+bloquant) : voir la section "Export statique" plus haut dans ce document, et `PROGRESS.md` >
+jalon "Export statique" pour le compte-rendu des vérifications (build, contenu HTML par page,
+comportement du formulaire, test Playwright du hero WebGL).
 
 ## Contenu réel — où sont les sources
 

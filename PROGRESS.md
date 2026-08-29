@@ -881,3 +881,149 @@ client avant publication définitive :
 3. **Bascule production/DNS hors périmètre** : aucun déploiement, aucun changement DNS, aucune
    action externe n'a été effectuée sur ce projet ni sur `../novatrix/` (site Nuxt actuel,
    toujours en production, jamais touché).
+
+## Jalon : Export statique complet (`output: 'export'`) (terminé)
+
+Demande explicite du client, après la fin des 5 phases, pour obtenir un export HTML statique
+complet du site (`next build` génère un dossier `out/` avec un `.html` par page), en
+connaissance de cause que cela désactive les Server Actions (annoncé au préalable).
+
+### Ce qui a changé
+
+1. **`next.config.ts`** : ajout de `output: 'export'` et `images: { unoptimized: true }`.
+   `next/image` est utilisé une seule fois dans le projet (`src/components/layout/Header.tsx`,
+   logo local `/brand/novatrix-mark.png`) sans loader custom — l'optimiseur par défaut n'étant
+   pas supporté en export statique, il est désactivé plutôt que de configurer un loader externe
+   (Cloudinary, etc.) non nécessaire pour ce projet.
+
+2. **Conversion de la Server Action du formulaire de contact** :
+   `src/app/contact/actions.ts` (Server Action `submitContactForm`, `useActionState` côté
+   `ContactForm.tsx`) a été **supprimé** — les Server Actions ne sont pas supportées en export
+   statique (pas de serveur Node.js pour les exécuter à la requête).
+   `src/components/forms/ContactForm.tsx` a été converti en gestion 100% client
+   (`'use client'`, `onSubmit` + `useState` pour l'état du formulaire, plus de
+   `useActionState`). La validation a été reprise **à l'identique** : mêmes règles (nom
+   requis, email via la même regex `EMAIL_RE`, message ≥ 10 caractères, consentement RGPD
+   requis), mêmes messages d'erreur (mot pour mot), même honeypot anti-bot (`company_website`,
+   même comportement de rejet silencieux en `success` factice). Le stub reste un stub :
+   `console.info` de la demande (mêmes champs journalisés : `name`, `email`, `messageLength`,
+   `receivedAt`), **aucune donnée réellement transmise ni persistée**. Le commentaire en tête
+   du fichier documente explicitement ce qui reste à brancher (email transactionnel, webhook
+   CRM ou API dédiée, persistance réelle, rate limiting/captcha) — inchangé par rapport au
+   TODO déjà présent dans l'ancienne Server Action, reformulé pour refléter qu'un service
+   externe est désormais nécessaire (il n'y a plus de serveur Next.js du tout après export).
+
+3. **`src/app/sitemap.ts` et `src/app/robots.ts`** : ajout de `export const dynamic =
+   'force-static'` sur les deux fichiers. Ces conventions Metadata File génèrent des routes
+   (`/sitemap.xml`, `/robots.txt`) qui, dans Next.js 16.3.3, exigent cette déclaration
+   explicite en export statique (erreur de build sans elle : `export const dynamic =
+   "force-static"/export const revalidate not configured on route "/robots.txt" with "output:
+   export"` — corrigé après un premier essai de build en échec, voir "Tests" ci-dessous).
+   Aucun changement de comportement : ces routes n'utilisaient déjà aucune donnée de requête
+   dynamique (`sitemap.ts` liste 5 routes fixes, `robots.ts` retourne une règle statique).
+
+### Audit des autres incompatibilités connues de l'export statique Next.js
+
+- **Route Handlers (`src/app/api/`)** : absent du projet — rien à faire.
+- **`middleware.ts`** : absent du projet — rien à faire.
+- **Routes dynamiques (`[slug]`) sans `generateStaticParams`** : aucune route dynamique dans
+  `src/app/` (`find src/app -iname "[*]"` : aucun résultat) — les 5 pages sont toutes des
+  routes fixes, cohérent avec la décision documentée en Phase 1 (point 6, "Pas de sous-pages
+  dynamiques par service/projet") de représenter services/projets comme des ancres `#slug`
+  plutôt que des routes.
+- **`cookies()`/`headers()`/`draftMode()`** : aucun usage dans `src/` (grep vide).
+- **`rewrites`/`redirects`/`headers` dans `next.config.ts`** : absents (fichier de config
+  minimal, cf. diff).
+- **Hero WebGL lazy-loadé (`HeroBackground.tsx` → `next/dynamic(..., { ssr: false })`)** :
+  pattern explicitement supporté par l'export statique (Client Components prerendus en HTML
+  puis montés après hydratation, comportement identique à un SSG classique côté client) —
+  aucune modification nécessaire. Vérifié par test Playwright réel (voir "Tests" ci-dessous).
+
+### Tests
+
+1. **`npm run build`** : premier essai en échec (`/robots.txt` sans `dynamic = 'force-static'`,
+   voir point 3 ci-dessus) — corrigé, second essai réussi sans erreur ni warning. Sortie :
+   8 routes prerendues en statique (`/`, `/_not-found`, `/a-propos`, `/contact`,
+   `/realisations`, `/robots.txt`, `/services`, `/sitemap.xml`), toutes marquées `○ (Static)`.
+
+2. **Fichiers générés dans `out/`** (un `.html` par page, conforme au brief) :
+   `out/index.html`, `out/services.html`, `out/realisations.html`, `out/a-propos.html`,
+   `out/contact.html`, `out/404.html`, `out/_not-found.html`, `out/robots.txt`,
+   `out/sitemap.xml`, plus assets (`_next/static/`, `brand/novatrix-mark.png`, `favicon.ico`)
+   et payloads RSC internes (`__next.*.txt`, utilisés par le prefetch client, voir risque
+   connu ci-dessous).
+
+3. **Non-régression contenu HTML-first (T1)** — grep de fragments réels sur chaque page
+   générée (fichiers minifiés sur une seule ligne, `grep -o | wc -l` utilisé pour un compte
+   d'occurrences fiable plutôt que `grep -c` qui compte des lignes) :
+   - Titres corrects par page (`<title>`) : Accueil, `Services — NovatrixAI`,
+     `Réalisations — NovatrixAI`, `À propos — NovatrixAI`, `Contact — NovatrixAI`.
+   - `out/index.html` : 32 occurrences de "NovatrixAI", contenu `.reveal` toujours présent
+     (non comparable 1:1 au compte historique de PROGRESS.md Phase 5 — HTML désormais
+     minifié/CSS inline différent — mais texte réel non vide confirmé).
+   - `out/services.html` : contenu réel des services présent ("automatisation Make/Zapier/n8n,
+     applications...").
+   - `out/realisations.html` : structure storytelling "Problème"/"Solution"/"Résultat" toutes
+     présentes.
+   - `out/a-propos.html` : mentions "équipe"/"Équipe" présentes.
+   - `out/contact.html` : labels du formulaire présents mot pour mot ("Nom *", "Email
+     professionnel *", "Votre projet ou besoin *"), texte RGPD complet présent
+     ("...recontacte au sujet de cette demande...").
+   - `<canvas` : 0 occurrence dans `out/index.html` — confirme que le hero WebGL reste
+     bien absent du HTML initial (lazy-load non régressé par l'export statique).
+   - `out/sitemap.xml` et `out/robots.txt` : contenu correct (5 URLs, règle `Allow: /`,
+     référence au sitemap).
+
+4. **Formulaire de contact** : vérifié par lecture de code (pas de Playwright requis pour ce
+   point, conformément à la mission) — `src/components/forms/ContactForm.tsx` reproduit la
+   même logique de validation que l'ancienne Server Action, mêmes messages d'erreur, même
+   honeypot. `npm run lint` (ESLint, config `next/core-web-vitals`) : 0 erreur, 0 warning sur
+   le fichier modifié.
+
+5. **Hero WebGL en export statique — test Playwright réel** (pas une lecture de code) contre
+   l'export servi localement (`npx serve out` sur un port dédié) : après navigation et attente
+   de l'hydratation, `document.querySelectorAll('canvas')` trouve **1** canvas, avec un
+   contexte WebGL obtenu avec succès (`getContext('webgl2') || getContext('webgl')` non null)
+   — confirme le point 5 du brief (le canvas s'initialise bien côté client après chargement de
+   la page statique).
+
+6. **Navigation client-side réelle sur l'export servi** (Playwright, clic sur le lien
+   "Services" depuis l'accueil) : URL finale `.../services`, titre `Services — NovatrixAI`,
+   contenu réel de la page chargé, **0 erreur JS bloquante** (`page.on('pageerror')` vide).
+
+7. **`git status` (`novatrix-web`)** avant modification : `working tree clean`. **`git -C
+   ../novatrix status`** avant et après : `working tree clean` dans les deux cas, aucun
+   fichier de `novatrix/` touché (aucune commande n'a ciblé ce dossier).
+
+### Risque connu, non bloquant (documenté, non corrigé)
+
+En observant le réseau pendant le test Playwright (point 5/6 ci-dessus), le **prefetch RSC
+automatique** de `next/link` (déclenché dès qu'un lien est visible dans le viewport, avant
+tout clic) génère des requêtes en 404 : `/services/__next.services.__PAGE__.txt`,
+`/realisations/__next.realisations.__PAGE__.txt`, `/a-propos/__next.a-propos.__PAGE__.txt`,
+`/contact/__next.contact.__PAGE__.txt`. Cause identifiée : l'export statique génère ces
+payloads RSC en sous-dossier (`out/services/__next.services/__PAGE__.txt`), mais le code
+client de prefetch de Next.js 16.3.3 construit l'URL avec un point plat
+(`__next.services.__PAGE__.txt`) au lieu du `/` du chemin réel sur disque — un mismatch de
+nommage propre à cette version de Next.js en mode `output: 'export'`, pas une régression
+introduite par ce changement de config. **Impact fonctionnel : aucun** — vérifié que la
+navigation elle-même aboutit correctement au clic réel (point 6 ci-dessus, contenu chargé,
+0 erreur JS), Next.js retombant simplement sur un fetch/rendu normal quand le prefetch
+anticipé échoue. Effet secondaire possible en production : légère pollution des logs
+d'hébergement avec des 404 de prefetch, sans conséquence utilisateur observée. Non corrigé
+(hors périmètre de la mission — corriger nécessiterait soit une mise à jour de Next.js, soit
+une règle de réécriture d'URL côté hébergeur, à réévaluer si l'hébergement cible le justifie).
+
+### Fichiers modifiés/ajoutés/supprimés
+
+- Modifié : `next.config.ts` (`output: 'export'`, `images.unoptimized`).
+- Modifié : `src/app/sitemap.ts`, `src/app/robots.ts` (`export const dynamic =
+  'force-static'`).
+- Réécrit : `src/components/forms/ContactForm.tsx` (validation client, sans Server Action).
+- **Supprimé** : `src/app/contact/actions.ts` (Server Action, non supportée en export
+  statique — logique reprise dans `ContactForm.tsx`).
+- Modifiés (documentation) : `README.md`, `PROGRESS.md`.
+- **Aucune modification** de `package.json`/`package-lock.json` (aucune nouvelle dépendance —
+  `npx serve`/`npx playwright` utilisés ponctuellement pour les tests sans être ajoutés au
+  projet, cohérent avec le choix des phases précédentes), d'aucun autre `page.tsx`, d'aucun
+  fichier de `src/lib/content/*`, ni de `../novatrix/`.
