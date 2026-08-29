@@ -7,8 +7,8 @@ export function StatsStrip() {
   return (
     <Container>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {keyStats.map((stat) => (
-          <StatCard key={stat.id} stat={stat} />
+        {keyStats.map((stat, index) => (
+          <StatCard key={stat.id} stat={stat} index={index} />
         ))}
       </div>
     </Container>
