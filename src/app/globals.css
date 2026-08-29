@@ -30,6 +30,10 @@
   --elev-2: 0 1px 2px rgba(33, 20, 10, .08), 0 8px 24px rgba(33, 20, 10, .07);
   --elev-3: 0 2px 4px rgba(33, 20, 10, .08), 0 18px 48px rgba(136, 93, 7, .16);
   --ease-brand: cubic-bezier(.22, 1, .36, 1);
+  /* Phase 2 — reveals CSS natifs au scroll (brief section 3/6). Durée unique réutilisée
+     partout, toujours avec --ease-brand ci-dessus (sauf le compteur de stats, en linear —
+     voir plus bas), jamais un autre easing inventé. */
+  --dur-reveal: 600ms;
   /* Réservé exclusivement au hero de l'accueil — jamais utilisé ailleurs sur le site. */
   --hero-bg: #1C0038;
   --hero-grad-start: #6D28D9;
@@ -186,11 +190,102 @@
 }
 
 /*
- * Accessibilité — prefers-reduced-motion (brief section 6.B).
- * Phase 1 est HTML-first : aucune transition/animation n'est ajoutée à ce stade,
- * donc cette règle n'a rien à neutraliser pour l'instant. Elle est posée dès
- * maintenant pour que les phases 2-4 (reveals CSS, GSAP, WebGL) l'héritent
- * automatiquement sans devoir y repenser plus tard.
+ * Phase 2 — Reveals CSS natifs au scroll (brief section 3/6), sans JS, sans GSAP.
+ * Technique : `animation-timeline: view()` posé directement sur l'élément à révéler.
+ *
+ * Garde obligatoire non négociable : l'état initial (opacity:0 / transform) n'est déclaré
+ * QUE dans les navigateurs qui supportent `animation-timeline: view()`, via le bloc
+ * `@supports` ci-dessous. Sans cette garde, un navigateur sans support recevrait
+ * `opacity:0` sans jamais recevoir l'animation qui l'annule → texte définitivement
+ * invisible (régression T1 SEO/crawlabilité + accessibilité).
+ *
+ * Vérifié le 2026-08-29 (MDN "animation-timeline" + caniuse "mdn-css_properties_animation-
+ * timeline_scroll") : Firefox stable ne supporte pas encore `animation-timeline` (reste
+ * derrière le flag `layout.css.scroll-driven-animations.enabled` au moment de cette
+ * vérification) — donc le bloc `@supports` n'est pas une précaution théorique, c'est le
+ * chemin réellement emprunté par une part significative des visiteurs desktop. Chrome/Edge
+ * (depuis 2023) et Safari (depuis 2025) supportent la fonctionnalité.
+ */
+@supports (animation-timeline: view()) {
+  @keyframes reveal-in {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Primitive générique : sections de contenu (kicker/h2/h1/paragraphe), cartes bento
+     Services, StatCard, cartes témoignages, cartes de réalisations/équipe. Distance et
+     délai pilotés par les custom properties --reveal-y / --reveal-delay posées en inline
+     par les composants (choréographie propre à chaque type, cf. PROGRESS.md). */
+  .reveal {
+    opacity: 0;
+    transform: translateY(var(--reveal-y, 12px));
+    animation: reveal-in var(--dur-reveal) var(--ease-brand) var(--reveal-delay, 0ms) both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 30%;
+  }
+
+  /* Titres de page h1 (hors accueil), reveal mot par mot — découpage côté serveur,
+     zéro JS client. Fenêtre de déclenchement plus courte (25% au lieu de 30%) car un h1
+     est toujours tout en haut de page, donc franchit vite le seuil d'entrée. */
+  .reveal-word {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(var(--reveal-y, 14px));
+    animation: reveal-in var(--dur-reveal) var(--ease-brand) var(--reveal-delay, 0ms) both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 25%;
+  }
+
+  /*
+   * Livrable 3 — comptage animé des stats, décoratif uniquement. La vraie valeur
+   * (`{stat.value}`, ex. "100+") reste un vrai nœud texte inchangé dans le DOM — ce
+   * compteur ne fait que la doubler visuellement en overlay via un pseudo-élément
+   * (`content: counter(...)`, non fiable pour lecteurs d'écran/indexation, jamais utilisé
+   * comme unique porteur de l'information). Easing linear (pas --ease-brand) : un
+   * compteur qui « hésite » avant la valeur finale serait bizarre — cf. brief livrable 3.
+   */
+  @property --count-value {
+    syntax: '<integer>';
+    inherits: false;
+    initial-value: 0;
+  }
+
+  .stat-counter {
+    --count-value: 0;
+    counter-reset: stat-count-display var(--count-value);
+    animation: stat-count-up var(--dur-reveal) linear var(--reveal-delay, 0ms) both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 30%;
+  }
+
+  .stat-counter::after {
+    content: counter(stat-count-display);
+  }
+
+  @keyframes stat-count-up {
+    to {
+      --count-value: var(--count-target, 0);
+    }
+  }
+}
+
+/*
+ * Accessibilité — prefers-reduced-motion (brief section 6.B / T2, livrable 4).
+ *
+ * Le premier bloc ci-dessous (préexistant, Phase 1) neutralise les animations pilotées par
+ * le temps (`animation-duration`/`transition-duration`), mais ne suffit PAS pour les
+ * animations pilotées par `animation-timeline` (progression liée au scroll, pas au temps —
+ * écraser la durée à 0.01ms ne neutralise pas la timeline elle-même, l'élément resterait
+ * piloté par la position de scroll). Le second bloc force explicitement `animation: none`
+ * sur toutes les classes de reveal + le compteur de stats, ET rétablit l'état final visible
+ * (opacity/transform), car sans ce rétablissement explicite l'`opacity:0`/`transform`
+ * déclarés comme état de base dans `.reveal`/`.reveal-word` (au sein du bloc `@supports`
+ * plus haut) resteraient appliqués de façon statique une fois l'animation supprimée — piège
+ * documenté dans le brief. Testé réellement en émulation navigateur
+ * `prefers-reduced-motion: reduce` (voir PROGRESS.md) : contenu affiché immédiatement à son
+ * état final, aucun mot de titre masqué, aucun compteur qui défile.
  */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -198,5 +293,17 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  .reveal,
+  .reveal-word,
+  .stat-counter {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .stat-counter::after {
+    content: none !important;
   }
 }
