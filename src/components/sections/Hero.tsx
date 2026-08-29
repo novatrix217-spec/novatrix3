@@ -22,7 +22,7 @@ export function Hero() {
     <section
       className="relative overflow-hidden text-white"
       style={{
-        background: 'linear-gradient(135deg, var(--hero-bg) 0%, var(--hero-from) 55%, var(--hero-to) 100%)',
+        background: 'linear-gradient(135deg, var(--hero-bg) 0%, var(--hero-grad-start) 55%, var(--hero-grad-end) 100%)',
       }}
     >
       <Container className="grid min-h-[560px] items-center gap-10 py-20 lg:grid-cols-[1.1fr_.9fr] lg:py-28">
