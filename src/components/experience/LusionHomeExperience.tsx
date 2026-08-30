@@ -7,31 +7,9 @@ import type { CSSProperties } from 'react'
 import { MotionVideo } from '@/components/media/MotionVideo'
 import { NovatrixLogo } from '@/components/brand/NovatrixLogo'
 import { projectGallery } from '@/lib/content/projects'
+import { phase, windowOpacity, setLayer as updateLayer } from '@/lib/scrollScrub'
+import { useScrollScrub } from './useScrollScrub'
 import { ImmersiveWorldCanvas } from './ImmersiveWorldCanvas'
-
-const clamp = (value: number) => Math.max(0, Math.min(1, value))
-
-function phase(progress: number, from: number, to: number) {
-  const value = clamp((progress - from) / Math.max(0.0001, to - from))
-  return value * value * (3 - 2 * value)
-}
-
-function windowOpacity(progress: number, enterFrom: number, enterTo: number, leaveFrom: number, leaveTo: number) {
-  return phase(progress, enterFrom, enterTo) * (1 - phase(progress, leaveFrom, leaveTo))
-}
-
-function updateLayer(element: HTMLElement | null, opacity: number, transform = 'translate3d(0,0,0)') {
-  if (!element) return
-  const nextOpacity = String(clamp(opacity))
-  if (element.style.opacity !== nextOpacity) element.style.opacity = nextOpacity
-  if (element.style.transform !== transform) element.style.transform = transform
-  const interactive = opacity > 0.55
-  const pointerEvents = interactive ? 'auto' : 'none'
-  if (element.style.pointerEvents !== pointerEvents) element.style.pointerEvents = pointerEvents
-  if (element.inert === interactive) element.inert = !interactive
-  const visibility = opacity <= 0.001 ? 'hidden' : 'visible'
-  if (element.style.visibility !== visibility) element.style.visibility = visibility
-}
 
 function selectMosaicVideo(index: number) {
   window.dispatchEvent(new CustomEvent('novatrix:video-focus', { detail: { index } }))
@@ -79,27 +57,17 @@ export function LusionHomeExperience() {
   const threadRef = useRef<SVGPathElement>(null)
   const threadGlowRef = useRef<SVGPathElement>(null)
 
+  const soundEnabledRef = useRef(false)
+  const activeMosaicIndexRef = useRef(0)
+  const lastChapterRef = useRef(-1)
+  const syncPlaybackRef = useRef<(chapter: number) => void>(() => undefined)
+
   useEffect(() => {
-    const root = rootRef.current
-    const stage = stageRef.current
-    if (!root || !stage) return
-
-    document.body.classList.add('home-immersive-active')
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reducedMotion) {
-      document.body.classList.add('home-immersive-reduced')
-      return () => document.body.classList.remove('home-immersive-active', 'home-immersive-reduced')
-    }
-
-    let target = 0
-    let current = 0
-    let frame = 0
-    let lastChapter = -1
-    let soundEnabled = false
-    let activeMosaicIndex = 0
-    let previousFrameTime = performance.now()
-
-    const syncPlayback = (chapter: number) => {
+    syncPlaybackRef.current = (chapter: number) => {
+      const stage = stageRef.current
+      if (!stage) return
+      const soundEnabled = soundEnabledRef.current
+      const activeMosaicIndex = activeMosaicIndexRef.current
       stage.dataset.sound = soundEnabled ? 'on' : 'off'
       const chapters = stage.querySelectorAll<HTMLElement>(':scope > .immersive-chapter')
       const activeChapter = chapters[chapter - 1]
@@ -125,32 +93,36 @@ export function LusionHomeExperience() {
     }
 
     const soundChange = (event: Event) => {
-      soundEnabled = Boolean((event as CustomEvent<{ enabled?: boolean }>).detail?.enabled)
-      syncPlayback(lastChapter < 1 ? 1 : lastChapter)
+      soundEnabledRef.current = Boolean((event as CustomEvent<{ enabled?: boolean }>).detail?.enabled)
+      syncPlaybackRef.current(lastChapterRef.current < 1 ? 1 : lastChapterRef.current)
     }
     const videoFocus = (event: Event) => {
-      activeMosaicIndex = Number((event as CustomEvent<{ index?: number }>).detail?.index ?? 0)
-      if (lastChapter === 7) syncPlayback(7)
+      activeMosaicIndexRef.current = Number((event as CustomEvent<{ index?: number }>).detail?.index ?? 0)
+      if (lastChapterRef.current === 7) syncPlaybackRef.current(7)
     }
 
-    const measure = () => {
-      const travel = Math.max(1, root.offsetHeight - window.innerHeight)
-      target = clamp(-root.getBoundingClientRect().top / travel)
+    window.addEventListener('novatrix:sound-change', soundChange)
+    window.addEventListener('novatrix:video-focus', videoFocus)
+    return () => {
+      window.removeEventListener('novatrix:sound-change', soundChange)
+      window.removeEventListener('novatrix:video-focus', videoFocus)
     }
+  }, [])
 
-    const requestRender = () => {
-      measure()
-      if (frame) return
-      previousFrameTime = performance.now()
-      frame = requestAnimationFrame(render)
-    }
-
-    const render = (now: number) => {
-      frame = 0
-      const delta = Math.min(0.5, Math.max(0.001, (now - previousFrameTime) / 1000))
-      previousFrameTime = now
-      current += (target - current) * (1 - Math.exp(-10.5 * delta))
-      if (Math.abs(target - current) < 0.00005) current = target
+  useScrollScrub({
+    rootRef,
+    stageRef,
+    activeBodyClass: 'home-immersive-active',
+    reducedBodyClass: 'home-immersive-reduced',
+    getChapter: (current) => (current < 0.09 ? 1 : current < 0.225 ? 2 : current < 0.455 ? 3 : current < 0.535 ? 4 : current < 0.63 ? 5 : current < 0.845 ? 6 : current < 0.935 ? 7 : 8),
+    getHeaderColor: (chapter) => (chapter <= 4 || chapter === 8 ? '#080808' : '#ffffff'),
+    onChapterChange: (chapter) => {
+      lastChapterRef.current = chapter
+      if (progressLabelRef.current) progressLabelRef.current.textContent = String(chapter).padStart(2, '0')
+      window.dispatchEvent(new CustomEvent('novatrix:world-activity', { detail: { active: chapter === 6 } }))
+      syncPlaybackRef.current(chapter)
+    },
+    onRender: ({ progress: current }) => {
       progressRef.current = current
       const mobileViewport = window.innerWidth <= 900
 
@@ -261,15 +233,6 @@ export function LusionHomeExperience() {
       const endAlpha = phase(current, 0.92, 0.95)
       updateLayer(endRef.current, endAlpha, `translate3d(0,${(1 - endAlpha) * 22}vh,0)`)
 
-      const chapter = current < 0.09 ? 1 : current < 0.225 ? 2 : current < 0.455 ? 3 : current < 0.535 ? 4 : current < 0.63 ? 5 : current < 0.845 ? 6 : current < 0.935 ? 7 : 8
-      if (chapter !== lastChapter) {
-        lastChapter = chapter
-        stage.dataset.chapter = String(chapter)
-        document.body.style.setProperty('--immersive-header-color', chapter <= 4 || chapter === 8 ? '#080808' : '#ffffff')
-        window.dispatchEvent(new CustomEvent('novatrix:world-activity', { detail: { active: chapter === 6 } }))
-        syncPlayback(chapter)
-      }
-      if (progressLabelRef.current) progressLabelRef.current.textContent = String(chapter).padStart(2, '0')
       if (progressLineRef.current) progressLineRef.current.style.transform = `scaleX(${current})`
       const threadDraw = phase(current, 0.075, 0.925)
       const threadOpacity = phase(current, 0.065, 0.1) * (1 - phase(current, 0.92, 0.96))
@@ -281,25 +244,8 @@ export function LusionHomeExperience() {
         threadGlowRef.current.style.strokeDashoffset = String(1 - threadDraw)
         threadGlowRef.current.style.opacity = String(threadOpacity * 0.48)
       }
-      if (Math.abs(target - current) >= 0.00005) frame = requestAnimationFrame(render)
-    }
-
-    window.addEventListener('scroll', requestRender, { passive: true })
-    window.addEventListener('resize', requestRender)
-    window.addEventListener('novatrix:sound-change', soundChange)
-    window.addEventListener('novatrix:video-focus', videoFocus)
-    measure()
-    frame = requestAnimationFrame(render)
-    return () => {
-      window.removeEventListener('scroll', requestRender)
-      window.removeEventListener('resize', requestRender)
-      window.removeEventListener('novatrix:sound-change', soundChange)
-      window.removeEventListener('novatrix:video-focus', videoFocus)
-      cancelAnimationFrame(frame)
-      document.body.classList.remove('home-immersive-active')
-      document.body.style.removeProperty('--immersive-header-color')
-    }
-  }, [])
+    },
+  })
 
   return (
     <section ref={rootRef} className="immersive-home" aria-label="Expérience Novatrix">
