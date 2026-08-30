@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/Button'
 
 type ContactFormState = {
@@ -41,12 +41,20 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export function ContactForm() {
   const [state, setState] = useState<ContactFormState>(initialState)
   const [pending, setPending] = useState(false)
+  const feedbackRef = useRef<HTMLParagraphElement>(null)
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
 
     setPending(true)
+
+    if (!navigator.onLine) {
+      setState({ status: 'error', message: 'Vous semblez être hors ligne. Contactez-nous par WhatsApp ou réessayez une fois connecté.' })
+      setPending(false)
+      requestAnimationFrame(() => feedbackRef.current?.focus())
+      return
+    }
 
     // Honeypot anti-bot : champ caché que seuls les robots remplissent.
     if (formData.get('company_website')) {
@@ -69,6 +77,7 @@ export function ContactForm() {
     if (Object.keys(fieldErrors).length > 0) {
       setState({ status: 'error', message: 'Merci de corriger les champs indiqués ci-dessous.', fieldErrors })
       setPending(false)
+      requestAnimationFrame(() => feedbackRef.current?.focus())
       return
     }
 
@@ -84,66 +93,78 @@ export function ContactForm() {
 
     setState({
       status: 'success',
-      message: 'Merci ! Votre demande est bien reçue, nous vous recontactons rapidement.',
+      message: 'Votre demande est prête. Ce formulaire de démonstration ne transmet pas encore les données : contactez-nous par email ou WhatsApp pour finaliser l’envoi.',
     })
     setPending(false)
+    requestAnimationFrame(() => feedbackRef.current?.focus())
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-5 rounded-lg border border-border-subtle bg-elevated p-6 shadow-[var(--elev-1)] sm:p-8">
+    <form noValidate onSubmit={handleSubmit} className="grid gap-6 rounded-xl border border-border-subtle bg-elevated p-6 shadow-[0_24px_70px_rgba(28,0,56,.09)] sm:p-8 lg:p-10">
       {/* Honeypot anti-bot — champ masqué, jamais rempli par un humain. */}
       <input type="text" name="company_website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <label className="text-small font-semibold text-text-primary">
+        <label htmlFor="contact-name" className="text-small font-semibold text-text-primary">
           Nom *
           <input
+            id="contact-name"
             name="name"
             type="text"
             required
             autoComplete="name"
-            className="mt-2 w-full rounded-md border border-border-strong bg-surface px-3 py-2.5 text-body text-text-primary"
+            aria-invalid={Boolean(state.fieldErrors?.name)}
+            aria-describedby={state.fieldErrors?.name ? 'contact-name-error' : undefined}
+            className="mt-2 min-h-12 w-full rounded-md border border-border-strong bg-surface px-4 py-3 text-body text-text-primary"
           />
-          {state.fieldErrors?.name && <span className="text-small mt-1 block text-error">{state.fieldErrors.name}</span>}
+          {state.fieldErrors?.name && <span id="contact-name-error" className="text-small mt-1 block text-error">{state.fieldErrors.name}</span>}
         </label>
 
-        <label className="text-small font-semibold text-text-primary">
+        <label htmlFor="contact-email" className="text-small font-semibold text-text-primary">
           Email professionnel *
           <input
+            id="contact-email"
             name="email"
             type="email"
             required
             autoComplete="email"
-            className="mt-2 w-full rounded-md border border-border-strong bg-surface px-3 py-2.5 text-body text-text-primary"
+            aria-invalid={Boolean(state.fieldErrors?.email)}
+            aria-describedby={state.fieldErrors?.email ? 'contact-email-error' : undefined}
+            className="mt-2 min-h-12 w-full rounded-md border border-border-strong bg-surface px-4 py-3 text-body text-text-primary"
           />
-          {state.fieldErrors?.email && <span className="text-small mt-1 block text-error">{state.fieldErrors.email}</span>}
+          {state.fieldErrors?.email && <span id="contact-email-error" className="text-small mt-1 block text-error">{state.fieldErrors.email}</span>}
         </label>
       </div>
 
-      <label className="text-small font-semibold text-text-primary">
+      <label htmlFor="contact-message" className="text-small font-semibold text-text-primary">
         Votre projet ou besoin *
         <textarea
+          id="contact-message"
           name="message"
           required
           minLength={10}
           rows={5}
-          className="mt-2 w-full rounded-md border border-border-strong bg-surface px-3 py-2.5 text-body text-text-primary"
+          aria-invalid={Boolean(state.fieldErrors?.message)}
+          aria-describedby={state.fieldErrors?.message ? 'contact-message-error' : undefined}
+          className="mt-2 w-full rounded-md border border-border-strong bg-surface px-4 py-3 text-body text-text-primary"
         />
-        {state.fieldErrors?.message && <span className="text-small mt-1 block text-error">{state.fieldErrors.message}</span>}
+        {state.fieldErrors?.message && <span id="contact-message-error" className="text-small mt-1 block text-error">{state.fieldErrors.message}</span>}
       </label>
 
-      <label className="flex items-start gap-3 text-small text-text-secondary">
-        <input name="consent" type="checkbox" required className="mt-1 accent-accent" />
+      <label htmlFor="contact-consent" className="flex items-start gap-3 text-small text-text-secondary">
+        <input id="contact-consent" name="consent" type="checkbox" required aria-invalid={Boolean(state.fieldErrors?.consent)} aria-describedby={state.fieldErrors?.consent ? 'contact-consent-error' : undefined} className="mt-1 size-5 shrink-0 accent-accent" />
         <span>
           J&rsquo;accepte que NovatrixAI me recontacte au sujet de cette demande, conformément à sa
           politique de confidentialité. *
         </span>
       </label>
-      {state.fieldErrors?.consent && <span className="text-small -mt-3 text-error">{state.fieldErrors.consent}</span>}
+      {state.fieldErrors?.consent && <span id="contact-consent-error" className="text-small -mt-3 text-error">{state.fieldErrors.consent}</span>}
 
       {state.status !== 'idle' && (
         <p
-          role="status"
+          ref={feedbackRef}
+          role={state.status === 'error' ? 'alert' : 'status'}
+          tabIndex={-1}
           className={`text-small rounded-md p-3 ${state.status === 'success' ? 'bg-success/10 text-success' : 'bg-error/10 text-error'}`}
         >
           {state.message}
@@ -151,7 +172,7 @@ export function ContactForm() {
       )}
 
       <Button type="submit" disabled={pending}>
-        {pending ? 'Envoi en cours…' : 'Envoyer ma demande'}
+        {pending ? 'Validation…' : 'Valider ma demande'}
       </Button>
     </form>
   )

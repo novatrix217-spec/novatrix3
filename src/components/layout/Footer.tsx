@@ -1,70 +1,44 @@
 import Link from 'next/link'
 import { navLinks, siteConfig } from '@/lib/content/site'
 import { Container } from '@/components/ui/Container'
-import { services } from '@/lib/content/services'
+import { ScrollNext } from '@/components/experience/ScrollNext'
 
 export function Footer() {
   return (
-    <footer
-      className="border-t border-border-subtle bg-elevated"
-      style={{ viewTransitionName: 'site-footer' }}
-    >
-      <Container className="grid gap-10 py-16 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <p className="font-display text-lg font-bold text-text-primary">{siteConfig.name}</p>
-          <p className="mt-3 max-w-xs text-small text-text-secondary">{siteConfig.tagline}</p>
-          <p className="mt-4 text-small text-text-secondary">{siteConfig.location}</p>
-        </div>
+    <>
+      <footer className="lusion-footer" style={{ viewTransitionName: 'site-footer' }}>
+        <Container>
+          <div className="lusion-footer-top">
+            <p>Un projet, une idée ou un défi à partager&nbsp;?</p>
+            <h2>Construisons<br />la suite.</h2>
+          </div>
 
-        <div>
-          <p className="kicker text-text-secondary">Navigation</p>
-          <ul className="mt-4 space-y-2 text-small">
-            {navLinks.map((link) => (
-              <li key={link.href}>
-                <Link href={link.href} className="text-text-secondary hover:text-accent">
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
+          <div className="lusion-footer-middle">
+            <div>
+              <p className="lusion-footer-label">Studio</p>
+              <p>{siteConfig.location}</p>
+              <a href={siteConfig.whatsappUrl} target="_blank" rel="noopener noreferrer">{siteConfig.phoneDisplay}</a>
+            </div>
+            <div>
+              <p className="lusion-footer-label">Nouveaux projets</p>
+              <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a>
+            </div>
+            <nav aria-label="Navigation du pied de page">
+              {navLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}
+            </nav>
+            <a href={`mailto:${siteConfig.email}`} className="lusion-footer-contact">
+              <span>Votre message</span><span aria-hidden="true">→</span>
+            </a>
+          </div>
 
-        <div>
-          <p className="kicker text-text-secondary">Services</p>
-          <ul className="mt-4 space-y-2 text-small">
-            {services.slice(0, 4).map((service) => (
-              <li key={service.slug}>
-                <Link href={service.href} className="text-text-secondary hover:text-accent">
-                  {service.title}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <p className="kicker text-text-secondary">Contact</p>
-          <ul className="mt-4 space-y-2 text-small">
-            <li>
-              <a href={`mailto:${siteConfig.email}`} className="text-text-secondary hover:text-accent">
-                {siteConfig.email}
-              </a>
-            </li>
-            <li>
-              <a href={siteConfig.whatsappUrl} target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-accent">
-                {siteConfig.phoneDisplay} (WhatsApp)
-              </a>
-            </li>
-          </ul>
-        </div>
-      </Container>
-
-      <div className="border-t border-border-subtle">
-        <Container className="flex flex-col gap-2 py-6 text-small text-text-secondary sm:flex-row sm:items-center sm:justify-between">
-          <span>© {new Date().getFullYear()} {siteConfig.legalName}. Tous droits réservés.</span>
-          <Link href="/contact" className="hover:text-accent">Nous contacter</Link>
+          <div className="lusion-footer-bottom">
+            <span>© {new Date().getFullYear()} {siteConfig.legalName}</span>
+            <span>Studio numérique indépendant</span>
+            <a href="#main-content" aria-label="Retour en haut">↑</a>
+          </div>
         </Container>
-      </div>
-    </footer>
+      </footer>
+      <ScrollNext />
+    </>
   )
 }

@@ -18,19 +18,19 @@ export function StatCard({ stat, index = 0 }: { stat: Stat; index?: number }) {
 
   return (
     <div
-      className="reveal rounded-lg border border-border-subtle bg-elevated p-6 text-center shadow-[var(--elev-1)]"
+      className="reveal border-l border-border-subtle px-4 py-7 first:border-l-0 sm:px-6 sm:py-9"
       style={revealStyle(delay, 12)}
     >
-      <p className="text-h1 font-display relative inline-block font-bold text-accent">
+      <p className="text-h2 font-display relative inline-block font-bold text-text-primary">
         {stat.value}
         <span
           aria-hidden="true"
           data-suffix={suffix}
           style={counterStyle(target, delay)}
-          className="stat-counter absolute inset-0 flex items-center justify-center bg-elevated"
+          className="stat-counter absolute inset-0 flex items-center bg-surface"
         />
       </p>
-      <p className="mt-2 text-small text-text-secondary">{stat.label}</p>
+      <p className="kicker mt-3 text-text-secondary">{stat.label}</p>
     </div>
   )
 }

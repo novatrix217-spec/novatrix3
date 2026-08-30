@@ -1,19 +1,11 @@
 import type { Metadata } from 'next'
-import { Bricolage_Grotesque, DM_Sans, JetBrains_Mono } from 'next/font/google'
+import { DM_Sans, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { ViewTransitionRouter } from '@/components/layout/ViewTransitionRouter'
+import { ExperienceLayer } from '@/components/experience/ExperienceLayer'
 import { siteConfig } from '@/lib/content/site'
-
-// Typographie du brief : titres Bricolage Grotesque (600-700), corps DM Sans (400-500),
-// labels/kickers JetBrains Mono (500, majuscules, +0.18em letter-spacing en CSS).
-const bricolage = Bricolage_Grotesque({
-  subsets: ['latin'],
-  weight: ['600', '700'],
-  variable: '--font-bricolage',
-  display: 'swap',
-})
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -46,7 +38,11 @@ export const metadata: Metadata = {
     images: ['/brand/novatrix-mark.png'],
   },
   icons: {
-    icon: '/brand/novatrix-mark.png',
+    icon: [
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-192x192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
   },
 }
 
@@ -56,11 +52,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="fr" className={`${bricolage.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
+    <html lang="fr" className={`${dmSans.variable} ${jetbrainsMono.variable}`}>
       <body className="flex min-h-screen flex-col antialiased">
+        <ExperienceLayer />
         <ViewTransitionRouter />
         <Header />
-        <main className="flex-1">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1">{children}</main>
         <Footer />
       </body>
     </html>

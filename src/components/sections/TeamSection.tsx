@@ -13,7 +13,7 @@ export function TeamSection() {
     return (
       <div
         style={revealStyle(0, 10)}
-        className="reveal rounded-lg border border-dashed border-border-strong bg-surface p-8 text-center"
+        className="reveal grid min-h-72 place-content-center rounded-xl border border-dashed border-border-strong bg-surface p-8 text-center"
       >
         <p className="text-h3 font-display font-bold text-text-primary">Portraits de l&rsquo;équipe à compléter</p>
         <p className="text-body mt-3 mx-auto max-w-xl text-text-secondary">{teamPlaceholderNote}</p>

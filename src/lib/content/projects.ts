@@ -1,4 +1,4 @@
-import type { ProjectCaseStudy } from './types'
+import type { ProjectCaseStudy, ProjectPreviewItem } from './types'
 
 // Les 3 cas d'usage identifiés dans NOVATRIX_BRIEF.md section 2 ("Portfolio existant
 // intéressant à valoriser en storytelling") + section 7 (livrable Phase 1, point 7).
@@ -11,6 +11,7 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
   {
     slug: 'relance-paniers-abandonnes-shopify-twilio',
     title: 'Relance automatique des paniers abandonnés',
+    previewTitle: 'Relance Shopify',
     category: 'Automatisation e-commerce',
     client: 'Boutique e-commerce Shopify',
     problem:
@@ -24,11 +25,14 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
       'Gain de temps pour le client et meilleure efficacité marketing.',
     ],
     tools: ['Shopify', 'Twilio'],
+    image: '/media/projects/shopify-relance.webp',
+    imageAlt: 'Scénario automatisé reliant une boutique Shopify à des relances Twilio.',
     source: 'novatrix/rendu.json (portfolio), archives/.../PortfolioSection.tsx',
   },
   {
     slug: 'jeefox-moteur-de-recherche-intelligent',
     title: 'Jeefox, moteur de recherche intelligent',
+    previewTitle: 'Jeefox',
     category: 'Application web IA',
     problem:
       "Le projet Jeefox nécessitait un moteur de recherche intelligent complet : une expérience de recherche avec chat intégré, un canal de monétisation publicitaire pour les annonceurs, et une administration centralisée pour piloter l'ensemble.",
@@ -37,11 +41,14 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
     results: [
       'Un système multi-applications opérationnel couvrant recherche, monétisation publicitaire et pilotage administratif.',
     ],
+    image: '/media/projects/jeefox.webp',
+    imageAlt: 'Interface du moteur de recherche intelligent Jeefox.',
     source: 'novatrix/rendu.json (portfolio), archives/.../PortfolioSection.tsx',
   },
   {
     slug: 'site-vitrine-agence-wingoai',
     title: "Site vitrine de l'agence WingoAI",
+    previewTitle: 'WingoAI',
     category: 'Site vitrine & chatbot IA',
     client: 'WingoAI — agence d’automatisation IA',
     problem:
@@ -54,6 +61,64 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
     ],
     externalUrl: 'https://agencewingo.com',
     tools: ['Chatbot IA'],
+    image: '/media/projects/wingoai.webp',
+    imageAlt: 'Page d’accueil du site vitrine WingoAI.',
     source: 'novatrix/rendu.json (portfolio), archives/.../PortfolioSection.tsx',
+  },
+]
+
+export const projectGallery: ProjectPreviewItem[] = [
+  ...projectCaseStudies.map(({ slug, title, previewTitle, category, image, imageAlt }) => ({
+    slug,
+    title,
+    previewTitle,
+    category,
+    image,
+    imageAlt,
+  })),
+  {
+    slug: 'agent-ia-gestion-agenda',
+    title: 'Agent IA de gestion d’agenda',
+    previewTitle: 'Agent Agenda IA',
+    category: 'Agent IA administratif',
+    image: '/media/projects/agent-ia-gestion-agenda.webp',
+    imageAlt: 'Interface d’un agent IA dédié à la gestion d’agenda.',
+    href: '/realisations',
+  },
+  {
+    slug: 'automatisation-crm-agent-ia-n8n',
+    title: 'CRM automatisé avec n8n',
+    previewTitle: 'CRM + n8n',
+    category: 'Automatisation CRM',
+    image: '/media/projects/automatisation-crm-agent-ia-n8n.webp',
+    imageAlt: 'Workflow d’automatisation CRM avec un agent IA et n8n.',
+    href: '/realisations',
+  },
+  {
+    slug: 'comparateur-mutuelles-senior',
+    title: 'Comparateur de mutuelles',
+    previewTitle: 'Mutuelles Senior',
+    category: 'Application web',
+    image: '/media/projects/comparateur-mutuelles-senior.webp',
+    imageAlt: 'Interface d’un comparateur de mutuelles en ligne.',
+    href: '/realisations',
+  },
+  {
+    slug: 'solution-rh-automatisee',
+    title: 'Solution RH automatisée',
+    previewTitle: 'Solution RH',
+    category: 'Produit SaaS IA',
+    image: '/media/projects/solution-rh-automatisee.webp',
+    imageAlt: 'Tableau de bord d’une solution RH automatisée.',
+    href: '/realisations',
+  },
+  {
+    slug: 'creation-contenu-ia-n8n-gpt',
+    title: 'Studio de contenu IA',
+    previewTitle: 'Studio IA',
+    category: 'IA générative',
+    image: '/media/projects/creation-contenu-ia-n8n-gpt.webp',
+    imageAlt: 'Workflow de création de contenu utilisant GPT et n8n.',
+    href: '/realisations',
   },
 ]

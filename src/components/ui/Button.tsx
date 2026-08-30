@@ -1,17 +1,18 @@
 import Link from 'next/link'
-import type { ReactNode } from 'react'
+import type { MouseEventHandler, ReactNode } from 'react'
 
 type CommonProps = {
   children: ReactNode
   variant?: 'primary' | 'secondary'
   className?: string
+  onClick?: MouseEventHandler<HTMLAnchorElement>
 }
 
 const base =
-  'inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-5 py-3 text-sm font-semibold'
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-5 py-3 text-sm font-semibold leading-none'
 const variants = {
-  primary: 'bg-accent text-ink-on-accent hover:bg-accent-hover',
-  secondary: 'border border-border-strong text-text-primary hover:bg-accent-soft',
+  primary: 'border border-accent bg-accent text-ink-on-accent hover:border-accent-hover hover:bg-accent-hover',
+  secondary: 'border border-border-strong text-text-primary hover:border-accent hover:bg-accent-soft',
 }
 
 export function ButtonLink({
@@ -20,6 +21,7 @@ export function ButtonLink({
   variant = 'primary',
   className = '',
   external = false,
+  onClick,
 }: CommonProps & { href: string; external?: boolean }) {
   if (external) {
     return (
@@ -27,6 +29,7 @@ export function ButtonLink({
         href={href}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={onClick}
         className={`${base} ${variants[variant]} ${className}`}
       >
         {children}
@@ -34,7 +37,7 @@ export function ButtonLink({
     )
   }
   return (
-    <Link href={href} className={`${base} ${variants[variant]} ${className}`}>
+    <Link href={href} onClick={onClick} className={`${base} ${variants[variant]} ${className}`}>
       {children}
     </Link>
   )

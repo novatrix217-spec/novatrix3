@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["127.0.0.1", "192.168.100.20"],
   // Export HTML statique complet (`next build` génère `out/`, un .html par page) — demandé
   // explicitement par le client, en connaissance de cause que cela désactive les Server
   // Actions (voir src/components/forms/ContactForm.tsx pour la conversion associée) et

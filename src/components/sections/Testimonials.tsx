@@ -12,14 +12,15 @@ import { revealStyle, staggerDelay } from '@/lib/reveal'
 export function Testimonials({ limit }: { limit?: number }) {
   const shown = limit ? testimonials.slice(0, limit) : testimonials
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid border-y border-border-subtle md:grid-cols-3">
       {shown.map((item, index) => (
         <figure
           key={item.id}
           style={revealStyle(staggerDelay(index, 80, 2), 10)}
-          className="reveal flex h-full flex-col rounded-lg border border-border-subtle bg-elevated p-6 shadow-[var(--elev-1)]"
+          className="reveal flex h-full min-h-72 flex-col border-b border-border-subtle p-6 md:border-b-0 md:border-l md:first:border-l-0 lg:p-8"
         >
-          <blockquote className="text-body flex-1 leading-6 text-text-primary">&laquo; {item.quote} &raquo;</blockquote>
+          <span aria-hidden="true" className="font-display text-6xl leading-none text-accent">“</span>
+          <blockquote className="text-body-lg mt-5 flex-1 text-text-primary">{item.quote}</blockquote>
           <figcaption className="mt-5 border-t border-border-subtle pt-4">
             <span className="block text-small font-bold text-text-primary">{item.name}</span>
             {item.role && <span className="text-small block text-text-secondary">{item.role}</span>}

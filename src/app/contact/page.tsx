@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { Container } from '@/components/ui/Container'
-import { Section } from '@/components/ui/Section'
 import { Kicker } from '@/components/ui/Kicker'
 import { RevealTitle } from '@/components/ui/RevealTitle'
 import { ContactForm } from '@/components/forms/ContactForm'
@@ -15,42 +14,42 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <Section>
+    <section className="section-pad" aria-labelledby="contact-title">
       <Container>
-        <div className="grid gap-12 lg:grid-cols-[.85fr_1.15fr]">
-          <div>
-            <div className="reveal" style={revealStyle(0, 8)}>
-              <Kicker>Contact</Kicker>
-            </div>
-            <RevealTitle
-              text="Prêt à démarrer votre projet ?"
-              className="text-h1 font-display mt-3 font-bold text-text-primary"
-            />
-            <p className="reveal text-body-lg mt-4 text-text-secondary" style={revealStyle(80, 16)}>
-              Décrivez votre besoin dans le formulaire, nous vous recontactons rapidement. Pour
-              une réponse plus rapide encore, écrivez-nous directement sur WhatsApp.
+        <div className="grid gap-12 lg:grid-cols-12 lg:gap-16">
+          <div className="lg:col-span-5">
+            <div className="reveal" style={revealStyle(0, 8)}><Kicker>Contact</Kicker></div>
+            <RevealTitle id="contact-title" text="Parlons de ce qui vient après." className="text-h1 mt-4 text-text-primary" />
+            <p className="reveal text-body-lg mt-6 max-w-xl text-text-secondary" style={revealStyle(80, 16)}>
+              Décrivez votre besoin dans le formulaire. Pour une réponse plus directe, écrivez-nous sur WhatsApp.
             </p>
 
-            <div className="reveal mt-8 space-y-3" style={revealStyle(160, 12)}>
-              <p className="text-body text-text-primary">
-                <a href={`mailto:${siteConfig.email}`} className="font-semibold text-accent hover:text-accent-hover">
-                  {siteConfig.email}
-                </a>
-              </p>
-              <p className="text-body text-text-primary">{siteConfig.phoneDisplay} (WhatsApp)</p>
-              <p className="text-body text-text-secondary">{siteConfig.location}</p>
-            </div>
-
-            <WhatsAppCta className="mt-8" />
+            <address className="reveal mt-10 border-y border-border-subtle not-italic" style={revealStyle(160, 12)}>
+              <div className="grid gap-2 border-b border-border-subtle py-5 sm:grid-cols-[120px_1fr]">
+                <span className="kicker text-text-secondary">Email</span>
+                <a href={`mailto:${siteConfig.email}`} className="font-semibold text-accent hover:text-accent-hover">{siteConfig.email}</a>
+              </div>
+              <div className="grid gap-2 border-b border-border-subtle py-5 sm:grid-cols-[120px_1fr]">
+                <span className="kicker text-text-secondary">Téléphone</span>
+                <span className="font-semibold text-text-primary">{siteConfig.phoneDisplay}</span>
+              </div>
+              <div className="grid gap-2 py-5 sm:grid-cols-[120px_1fr]">
+                <span className="kicker text-text-secondary">Localisation</span>
+                <span className="font-semibold text-text-primary">{siteConfig.location}</span>
+              </div>
+            </address>
+            <WhatsAppCta className="mt-8 w-full sm:w-auto" />
           </div>
 
-          {/* Habillage visuel de reveal (wrapper CSS uniquement) — ContactForm.tsx lui-même
-              n'est pas modifié, conformément au garde-fou de la mission. */}
-          <div className="reveal" style={revealStyle(80, 12)}>
+          <div className="reveal lg:col-span-7" style={revealStyle(80, 12)}>
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <p className="kicker text-text-secondary">Brief projet</p>
+              <span className="kicker text-accent">01 — 04</span>
+            </div>
             <ContactForm />
           </div>
         </div>
       </Container>
-    </Section>
+    </section>
   )
 }

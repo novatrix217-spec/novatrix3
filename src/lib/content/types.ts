@@ -22,10 +22,17 @@ export type Service = {
   source: string
 }
 
-export type ProjectCaseStudy = {
+export type ProjectPreviewItem = {
   slug: string
   title: string
+  previewTitle?: string
   category: string
+  image: string
+  imageAlt: string
+  href?: string
+}
+
+export type ProjectCaseStudy = ProjectPreviewItem & {
   client?: string
   problem: string
   solution: string

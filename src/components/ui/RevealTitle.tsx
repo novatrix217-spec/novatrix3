@@ -9,11 +9,12 @@ import { revealStyle, staggerDelay } from '@/lib/reveal'
  * séparé par un vrai espace texte, jamais recomposé par du JS). Stagger +50ms par mot,
  * plafonné aux 6 premiers mots (les mots suivants réutilisent le délai du 6e).
  */
-export function RevealTitle({ text, className = '' }: { text: string; className?: string }) {
+export function RevealTitle({ text, className = '', id, as = 'h1' }: { text: string; className?: string; id?: string; as?: 'h1' | 'h2' }) {
   const words = text.split(' ')
+  const Heading = as
 
   return (
-    <h1 className={className}>
+    <Heading id={id} className={className}>
       {words.map((word, index) => (
         <Fragment key={`${word}-${index}`}>
           <span className="reveal-word" style={revealStyle(staggerDelay(index, 50, 5), 14)}>
@@ -22,6 +23,6 @@ export function RevealTitle({ text, className = '' }: { text: string; className?
           {index < words.length - 1 ? ' ' : null}
         </Fragment>
       ))}
-    </h1>
+    </Heading>
   )
 }

@@ -30,8 +30,8 @@ void main() {
 }
 `
 
-// Palette hero strictement réservée (globals.css : --hero-bg / --hero-grad-start /
-// --hero-grad-end), aucune autre couleur introduite ici.
+// Palette hero strictement réservée, alignée sur les tokens --brand-deep,
+// --brand-violet et --brand-glow de globals.css.
 const FRAGMENT = `
 precision highp float;
 varying vec2 vUv;
@@ -105,6 +105,8 @@ export function HeroCanvas() {
     let raf = 0
     let cleanup: (() => void) | undefined
     let announcedReady = false
+    let inViewport = true
+    let pageVisible = document.visibilityState === 'visible'
 
     void (async () => {
       try {
@@ -153,9 +155,19 @@ export function HeroCanvas() {
         }
         window.addEventListener('pointermove', onPointerMove, { passive: true })
         window.addEventListener('resize', resize)
+        const observer = new IntersectionObserver(([entry]) => {
+          inViewport = entry.isIntersecting
+        }, { rootMargin: '120px' })
+        observer.observe(container)
+        const onVisibilityChange = () => {
+          pageVisible = document.visibilityState === 'visible'
+        }
+        document.addEventListener('visibilitychange', onVisibilityChange)
         cleanup = () => {
           window.removeEventListener('pointermove', onPointerMove)
           window.removeEventListener('resize', resize)
+          document.removeEventListener('visibilitychange', onVisibilityChange)
+          observer.disconnect()
           const canvas = gl.canvas
           canvas.parentElement?.removeChild(canvas)
           gl.getExtension('WEBGL_lose_context')?.loseContext()
@@ -164,6 +176,10 @@ export function HeroCanvas() {
         const start = performance.now()
         const loop = (now: number) => {
           if (destroyed) return
+          if (!inViewport || !pageVisible) {
+            raf = requestAnimationFrame(loop)
+            return
+          }
           currentMouse[0] += (targetMouse[0] - currentMouse[0]) * 0.06
           currentMouse[1] += (targetMouse[1] - currentMouse[1]) * 0.06
           program.uniforms.uTime.value = (now - start) / 1000

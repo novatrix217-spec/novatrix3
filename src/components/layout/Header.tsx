@@ -1,60 +1,120 @@
-import Image from 'next/image'
+'use client'
+
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
 import { navLinks, siteConfig } from '@/lib/content/site'
 import { Container } from '@/components/ui/Container'
-import { ButtonLink } from '@/components/ui/Button'
+import { NovatrixLogo } from '@/components/brand/NovatrixLogo'
+
+function isCurrent(pathname: string, href: string) {
+  return href === '/' ? pathname === '/' : pathname.startsWith(href)
+}
 
 export function Header() {
+  const pathname = usePathname()
+  const [open, setOpen] = useState(false)
+  const [soundEnabled, setSoundEnabled] = useState(false)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const panel = panelRef.current
+    panel?.querySelector<HTMLElement>('a[href]')?.focus()
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setOpen(false)
+        menuButtonRef.current?.focus()
+        return
+      }
+      if (event.key !== 'Tab' || !panel) return
+      const focusable = Array.from(panel.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'))
+      const first = focusable[0]
+      const last = focusable.at(-1)
+      if (!first || !last) return
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [open])
+
+  const toggleSound = () => {
+    setSoundEnabled((enabled) => {
+      const next = !enabled
+      window.dispatchEvent(new CustomEvent('novatrix:sound-change', { detail: { enabled: next } }))
+      return next
+    })
+  }
+
   return (
-    <header
-      className="sticky top-0 z-50 border-b border-border-subtle bg-elevated/95 backdrop-blur"
-      style={{ viewTransitionName: 'site-header' }}
-    >
-      <Container className="flex h-20 items-center justify-between">
-        <Link href="/" className="flex items-center gap-3" aria-label={`${siteConfig.name} — Accueil`}>
-          <Image
-            src="/brand/novatrix-mark.png"
-            alt={`Logo ${siteConfig.name}`}
-            width={40}
-            height={40}
-            className="rounded-md"
-            priority
-          />
-          <span className="font-display text-lg font-bold text-text-primary">{siteConfig.name}</span>
-        </Link>
-
-        <nav aria-label="Navigation principale" className="hidden items-center gap-1 lg:flex">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="rounded-md px-3 py-2 text-sm font-semibold text-text-secondary hover:bg-accent-soft hover:text-text-primary"
-            >
-              {link.label}
+    <>
+      <a href="#main-content" className="skip-link">Aller au contenu</a>
+      <header className="experience-header" data-open={open} style={{ viewTransitionName: 'site-header' }}>
+        <Container className="experience-header-inner">
+          <Link href="/" className="experience-logo" aria-label={`${siteConfig.name} — Accueil`} data-cursor="Accueil">
+            <NovatrixLogo />
+          </Link>
+          <div className="experience-header-actions">
+            <button type="button" className="experience-sound" aria-pressed={soundEnabled} aria-label={soundEnabled ? 'Couper le son des vidéos' : 'Activer le son des vidéos'} onClick={toggleSound} data-magnetic="true">
+              <span className="experience-sound-bars" aria-hidden="true"><i /><i /><i /></span>
+              <span>{soundEnabled ? 'Son on' : 'Son off'}</span>
+            </button>
+            <Link href="/contact" className="experience-talk" data-magnetic="true" data-cursor="Écrire">
+              <span aria-hidden="true">→</span><span>Parlons-nous</span>
             </Link>
-          ))}
-        </nav>
+            <button
+              ref={menuButtonRef}
+              type="button"
+              aria-expanded={open}
+              aria-controls="experience-navigation"
+              className="experience-menu-button"
+              data-magnetic="true"
+              onClick={() => setOpen((value) => !value)}
+            >
+              <span>{open ? 'Fermer' : 'Menu'}</span>
+              <span className="experience-menu-dots" aria-hidden="true"><i /><i /></span>
+            </button>
+          </div>
+        </Container>
+      </header>
 
-        <div className="hidden lg:block">
-          <ButtonLink href="/contact" className="!min-h-10 !py-2">
-            Audit gratuit
-          </ButtonLink>
+      {open ? (
+        <div ref={panelRef} id="experience-navigation" role="dialog" aria-modal="true" aria-label="Menu principal" className="experience-menu-panel">
+          <Container className="experience-menu-layout">
+            <nav aria-label="Navigation principale" className="experience-menu-links">
+              {navLinks.map((link, index) => {
+                const current = isCurrent(pathname, link.href)
+                return (
+                  <Link key={link.href} href={link.href} onClick={() => setOpen(false)} aria-current={current ? 'page' : undefined} className="experience-menu-link" style={{ '--menu-index': index } as React.CSSProperties}>
+                    <span className="experience-menu-index">{String(index + 1).padStart(2, '0')}</span>
+                    <span className="experience-menu-text"><span>{link.label}</span><span aria-hidden="true">{link.label}</span></span>
+                    <span className="experience-menu-arrow" aria-hidden="true">↗</span>
+                  </Link>
+                )
+              })}
+            </nav>
+            <div className="experience-menu-meta">
+              <p><span>Studio</span>{siteConfig.location}</p>
+              <p><span>Nouveaux projets</span><a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a></p>
+              <Link href="/contact" onClick={() => setOpen(false)} className="experience-menu-cta">Démarrer un projet <span aria-hidden="true">→</span></Link>
+            </div>
+          </Container>
         </div>
-
-        {/* Nav mobile minimale, sans JS : liens visibles sur petit écran directement sous le logo. */}
-        <nav aria-label="Navigation principale (mobile)" className="flex items-center gap-3 lg:hidden">
-          <Link href="/contact" className="rounded-md bg-accent px-3 py-2 text-xs font-semibold text-ink-on-accent">
-            Contact
-          </Link>
-        </nav>
-      </Container>
-      <nav aria-label="Navigation secondaire (mobile)" className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border-subtle px-5 py-2 text-xs lg:hidden">
-        {navLinks.map((link) => (
-          <Link key={link.href} href={link.href} className="font-semibold text-text-secondary hover:text-accent">
-            {link.label}
-          </Link>
-        ))}
-      </nav>
-    </header>
+      ) : null}
+    </>
   )
 }
