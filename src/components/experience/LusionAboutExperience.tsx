@@ -38,15 +38,19 @@ export function LusionAboutExperience() {
     stageRef,
     activeBodyClass: 'about-immersive-active',
     reducedBodyClass: 'about-immersive-reduced',
-    getChapter: (current) => (current < 0.18 ? 1 : current < 0.39 ? 2 : current < 0.61 ? 3 : current < 0.74 ? 4 : current < 0.94 ? 5 : 6),
+    getChapter: (current) => (current < 0.1 ? 1 : current < 0.39 ? 2 : current < 0.61 ? 3 : current < 0.74 ? 4 : current < 0.94 ? 5 : 6),
     getHeaderColor: (chapter) => (chapter === 6 ? '#080808' : '#ffffff'),
     onRender: ({ progress: current }) => {
       progressRef.current = current
-      const heroLeave = phase(current, .12, .19)
+      // Hero recalibré (Lot 3) : démarre dès 4 % du scroll (au lieu de 12 %) pour un rythme
+      // d'entrée cohérent avec la Home, qui bouge dès ~6,5 %. Le cross-fade avec la scène
+      // suivante (storyAlpha) est resserré dans la même proportion pour éviter un "trou"
+      // visuel entre la sortie du hero et l'arrivée de la scène "story".
+      const heroLeave = phase(current, .04, .1)
       setLayer(heroRef.current, 1 - heroLeave, `translate3d(0,${-heroLeave * 12}vh,0) scale(${1 + heroLeave * .08})`)
       if (heroTitleRef.current) heroTitleRef.current.style.transform = `translate3d(${heroLeave * -6}vw,${heroLeave * -8}vh,0) skewX(${heroLeave * -9}deg) scaleX(${1 + heroLeave * .2})`
-      const storyAlpha = windowOpacity(current, .13, .2, .33, .4)
-      setLayer(storyRef.current, storyAlpha, `translate3d(0,${(1 - phase(current, .13, .2)) * 16}vh,0)`)
+      const storyAlpha = windowOpacity(current, .06, .16, .33, .4)
+      setLayer(storyRef.current, storyAlpha, `translate3d(0,${(1 - phase(current, .06, .16)) * 16}vh,0)`)
       if (storyTitleRef.current) {
         const drift = phase(current, .2, .37)
         storyTitleRef.current.style.transform = `translate3d(${drift * -5}vw,${drift * -5}vh,0)`
