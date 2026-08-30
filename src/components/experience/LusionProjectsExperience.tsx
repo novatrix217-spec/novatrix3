@@ -31,7 +31,12 @@ export function LusionProjectsExperience() {
       const element = gridTrackRef.current
       if (!element) return
       const viewportHeight = window.innerHeight || 1
-      const travelPx = Math.max(1, element.offsetHeight - viewportHeight + 80)
+      // La translation part de +34vh (voir onRender) : il faut donc parcourir la hauteur
+      // du track moins ce décalage initial, plus la hauteur du viewport, pour que le bas
+      // du track (dernière carte incluse) atteigne exactement le bas du viewport en fin
+      // de course — sans quoi la dernière carte reste tronquée (bug confirmé par QA).
+      const initialOffsetPx = 0.34 * viewportHeight
+      const travelPx = Math.max(1, element.offsetHeight + initialOffsetPx - viewportHeight)
       gridTravelRef.current = (travelPx / viewportHeight) * 100
     }
     measureGridTravel()
@@ -50,7 +55,7 @@ export function LusionProjectsExperience() {
     stageRef,
     activeBodyClass: 'projects-immersive-active',
     reducedBodyClass: 'projects-immersive-reduced',
-    getChapter: (current) => (current < .09 ? 1 : current < .25 ? 2 : current < .86 ? 3 : 4),
+    getChapter: (current) => (current < .09 ? 1 : current < .25 ? 2 : current < .9 ? 3 : 4),
     getHeaderColor: (chapter) => (chapter === 4 ? '#ffffff' : '#080808'),
     onRender: ({ progress: current }) => {
       // Chapitre 1 — intro "PROJETS" : fenêtre resserrée (Lot 4) pour réduire la zone morte
@@ -74,15 +79,17 @@ export function LusionProjectsExperience() {
       // Chapitre 3 — grille de projets : la distance de translation est calculée à partir
       // de la hauteur réelle du track (voir mesure ci-dessous), garantissant que la dernière
       // carte est pleinement visible avant l'entrée du chapitre de fin.
-      const gridAlpha = phase(current, .23, .29) * (1 - phase(current, .84, .89))
+      const gridAlpha = phase(current, .23, .29) * (1 - phase(current, .89, .94))
       setLayer(gridRef.current, gridAlpha)
       if (gridTrackRef.current) {
         const gridTravelProgress = phase(current, .25, .855)
         gridTrackRef.current.style.transform = `translate3d(0,${34 - gridTravelProgress * gridTravelRef.current}vh,0)`
       }
 
-      // Chapitre 4 — fin/CTA, repoussée pour laisser le temps à la grille de se terminer.
-      const endAlpha = phase(current, .865, .92)
+      // Chapitre 4 — fin/CTA. Démarre après .855 (fin de course du track) et après le début
+      // du fondu de sortie de la grille (.89), pour garantir une fenêtre où la dernière carte
+      // est intégralement visible avec opacité pleine avant toute transition (bug QA corrigé).
+      const endAlpha = phase(current, .9, .95)
       setLayer(endRef.current, endAlpha, `translate3d(0,${(1 - endAlpha) * 25}vh,0)`)
 
       if (progressRef.current) progressRef.current.style.transform = `scaleX(${current})`
