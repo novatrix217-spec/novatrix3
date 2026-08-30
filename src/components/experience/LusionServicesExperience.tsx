@@ -39,7 +39,7 @@ export function LusionServicesExperience() {
     activeBodyClass: 'services-immersive-active',
     reducedBodyClass: 'services-immersive-reduced',
     getChapter: (current) => (current < .09 ? 1 : current < .32 ? 2 : current < .76 ? 3 : current < .89 ? 4 : 5),
-    getHeaderColor: (chapter) => (chapter === 5 ? '#ffffff' : '#080808'),
+    getHeaderColor: (chapter) => (chapter === 3 || chapter === 4 ? '#080808' : '#ffffff'),
     onRender: ({ progress: current }) => {
       const heroLeave = phase(current, .045, .095)
       setLayer(heroRef.current, 1 - heroLeave, `translate3d(0,${-heroLeave * 10}vh,0) scale(${1 + heroLeave * .08})`)
