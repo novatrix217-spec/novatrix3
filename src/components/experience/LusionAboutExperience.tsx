@@ -40,6 +40,15 @@ export function LusionAboutExperience() {
     reducedBodyClass: 'about-immersive-reduced',
     getChapter: (current) => (current < 0.1 ? 1 : current < 0.39 ? 2 : current < 0.61 ? 3 : current < 0.74 ? 4 : current < 0.94 ? 5 : 6),
     getHeaderColor: (chapter) => (chapter === 6 ? '#080808' : '#ffffff'),
+    // Alternance de scènes : sombre (hero → collectif → terrain de jeu) → violet saturé sur
+    // le chapitre manifeste "AREA OF EXPERTISE" (motif Lusion volontaire, cf. commit c768802 —
+    // ne pas neutraliser) → clair sur la clôture/CTA.
+    getStageBackground: (chapter) =>
+      chapter === 5
+        ? { bg: 'var(--scene-glow)', fg: 'var(--scene-glow-fg)' }
+        : chapter === 6
+          ? { bg: 'var(--scene-paper)', fg: 'var(--scene-paper-fg)' }
+          : { bg: 'var(--scene-void)', fg: 'var(--scene-void-fg)' },
     onRender: ({ progress: current }) => {
       progressRef.current = current
       // Hero recalibré (Lot 3) : démarre dès 4 % du scroll (au lieu de 12 %) pour un rythme

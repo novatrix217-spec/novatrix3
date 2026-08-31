@@ -116,6 +116,13 @@ export function LusionHomeExperience() {
     reducedBodyClass: 'home-immersive-reduced',
     getChapter: (current) => (current < 0.09 ? 1 : current < 0.225 ? 2 : current < 0.455 ? 3 : current < 0.535 ? 4 : current < 0.63 ? 5 : current < 0.845 ? 6 : current < 0.935 ? 7 : 8),
     getHeaderColor: (chapter) => (chapter <= 4 || chapter === 8 ? '#080808' : '#ffffff'),
+    // Alternance de scènes (Lot cohérence transversale) : clair (hero → manifeste) → sombre
+    // (astronaute → tunnel → mosaïque) → clair (clôture/CTA), rythme déjà en place, désormais
+    // piloté par les tokens `--scene-*` partagés avec les 4 autres pages.
+    getStageBackground: (chapter) =>
+      chapter >= 5 && chapter <= 7
+        ? { bg: 'var(--scene-void)', fg: 'var(--scene-void-fg)' }
+        : { bg: 'var(--scene-paper)', fg: 'var(--scene-paper-fg)' },
     onChapterChange: (chapter) => {
       lastChapterRef.current = chapter
       if (progressLabelRef.current) progressLabelRef.current.textContent = String(chapter).padStart(2, '0')

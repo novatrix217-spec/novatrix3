@@ -57,6 +57,12 @@ export function LusionProjectsExperience() {
     reducedBodyClass: 'projects-immersive-reduced',
     getChapter: (current) => (current < .09 ? 1 : current < .25 ? 2 : current < .9 ? 3 : 4),
     getHeaderColor: (chapter) => (chapter === 4 ? '#ffffff' : '#080808'),
+    // Alternance de scènes : clair pour l'intro/portfolio/grille, rupture sombre sur la
+    // clôture/CTA finale (déjà en place, désormais pilotée par les tokens partagés).
+    getStageBackground: (chapter) =>
+      chapter === 4
+        ? { bg: 'var(--scene-void)', fg: 'var(--scene-void-fg)' }
+        : { bg: 'var(--scene-paper)', fg: 'var(--scene-paper-fg)' },
     onRender: ({ progress: current }) => {
       // Chapitre 1 — intro "PROJETS" : fenêtre resserrée (Lot 4) pour réduire la zone morte
       // de début constatée à l'audit (0-15 % figés, ramenés à 0-9 %).

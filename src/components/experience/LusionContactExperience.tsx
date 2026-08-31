@@ -33,9 +33,17 @@ export function LusionContactExperience() {
     // scroller un peu sans jamais perdre l'accès au formulaire ni déclencher de
     // transition intrusive pendant la saisie.
     getChapter: (current) => (current < .13 ? 1 : current < .92 ? 2 : 3),
-    // Les 3 chapitres de cette page restent sur fond sombre (--bg-canvas) : le logo du
-    // header reste blanc du début à la fin, contrairement aux pages qui alternent clair/sombre.
-    getHeaderColor: () => '#ffffff',
+    // Les chapitres 1-2 (intro + formulaire) restent sur fond sombre : le logo du header
+    // reste blanc, et surtout aucune ré-écriture de la scène pendant que l'utilisateur
+    // saisit son message (non-régression formulaire, cf. commentaire de tête de fichier).
+    // Seule la clôture (chapitre 3) passe en scène claire, cohérent avec l'alternance des
+    // 4 autres pages : rupture ponctuelle de fin, jamais pendant l'interaction avec le
+    // formulaire.
+    getHeaderColor: (chapter) => (chapter === 3 ? '#080808' : '#ffffff'),
+    getStageBackground: (chapter) =>
+      chapter === 3
+        ? { bg: 'var(--scene-paper)', fg: 'var(--scene-paper-fg)' }
+        : { bg: 'var(--scene-void)', fg: 'var(--scene-void-fg)' },
     onRender: ({ progress: current }) => {
       const introLeave = phase(current, .045, .11)
       setLayer(introRef.current, 1 - introLeave, `translate3d(0,${-introLeave * 10}vh,0) scale(${1 + introLeave * .06})`)

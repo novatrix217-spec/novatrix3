@@ -39,7 +39,16 @@ export function LusionServicesExperience() {
     activeBodyClass: 'services-immersive-active',
     reducedBodyClass: 'services-immersive-reduced',
     getChapter: (current) => (current < .09 ? 1 : current < .32 ? 2 : current < .76 ? 3 : current < .89 ? 4 : 5),
-    getHeaderColor: (chapter) => (chapter === 3 || chapter === 4 ? '#080808' : '#ffffff'),
+    getHeaderColor: (chapter) => (chapter === 3 ? '#080808' : '#ffffff'),
+    // Alternance de scènes : sombre (hero/méthode) → clair (grille d'offre) → violet saturé
+    // sur le chapitre chiffré "En chiffres" (équivalent du fond bleu vif Lusion sur un
+    // chapitre manifeste/donnée) → sombre sur la clôture/CTA.
+    getStageBackground: (chapter) =>
+      chapter === 3
+        ? { bg: 'var(--scene-paper)', fg: 'var(--scene-paper-fg)' }
+        : chapter === 4
+          ? { bg: 'var(--scene-glow)', fg: 'var(--scene-glow-fg)' }
+          : { bg: 'var(--scene-void)', fg: 'var(--scene-void-fg)' },
     onRender: ({ progress: current }) => {
       const heroLeave = phase(current, .045, .095)
       setLayer(heroRef.current, 1 - heroLeave, `translate3d(0,${-heroLeave * 10}vh,0) scale(${1 + heroLeave * .08})`)

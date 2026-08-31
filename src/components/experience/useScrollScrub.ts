@@ -23,6 +23,13 @@ export interface UseScrollScrubOptions {
   getChapter: (progress: number) => number
   /** Couleur de header (`--immersive-header-color`) à appliquer pour un chapitre donné. */
   getHeaderColor: (chapter: number) => string
+  /**
+   * Fond/texte de scène (`--stage-bg`/`--stage-fg`) à appliquer sur le stage pour un chapitre
+   * donné — système de scènes contrastées transversal aux 5 expériences (voir
+   * `--scene-void`/`--scene-glow`/`--scene-paper` dans `globals.css`). Optionnel : une
+   * expérience qui ne le fournit pas garde le fond déclaré par son propre CSS (rétrocompatible).
+   */
+  getStageBackground?: (chapter: number) => { bg: string; fg: string }
   /** Appelé à chaque frame utile avec la progression lissée courante. */
   onRender: (frame: ScrollScrubFrame) => void
   /** Appelé une fois lorsque le numéro de chapitre change (après mise à jour du DOM). */
@@ -48,6 +55,7 @@ export function useScrollScrub({
   reducedBodyClass,
   getChapter,
   getHeaderColor,
+  getStageBackground,
   onRender,
   onChapterChange,
   smoothing = SCRUB_SMOOTHING,
@@ -97,6 +105,11 @@ export function useScrollScrub({
         lastChapter = chapter
         stage.dataset.chapter = String(chapter)
         document.body.style.setProperty('--immersive-header-color', getHeaderColor(chapter))
+        if (getStageBackground) {
+          const { bg, fg } = getStageBackground(chapter)
+          stage.style.setProperty('--stage-bg', bg)
+          stage.style.setProperty('--stage-fg', fg)
+        }
         onChapterChange?.(chapter)
       }
 
