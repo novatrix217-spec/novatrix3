@@ -11,6 +11,7 @@ import { phase, windowOpacity, setLayer as updateLayer } from '@/lib/scrollScrub
 import { useScrollScrub } from './useScrollScrub'
 import { ImmersiveWorldCanvas } from './ImmersiveWorldCanvas'
 import { SceneCorners } from './SceneCorners'
+import { BrandRibbon } from './BrandRibbon'
 
 function selectMosaicVideo(index: number) {
   window.dispatchEvent(new CustomEvent('novatrix:video-focus', { detail: { index } }))
@@ -259,15 +260,7 @@ export function LusionHomeExperience() {
     <section ref={rootRef} className="immersive-home" aria-label="Expérience Novatrix">
       <div ref={stageRef} className="immersive-home-stage" data-chapter="1" data-sound="off">
         <SceneCorners />
-        <svg className="immersive-brand-thread" viewBox="0 0 1440 760" preserveAspectRatio="none" aria-hidden="true">
-          <defs>
-            <filter id="novatrix-thread-glow"><feGaussianBlur stdDeviation="11" /></filter>
-            <linearGradient id="novatrix-thread-gradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#6c00ff" /><stop offset=".54" stopColor="#ee00e8" /><stop offset="1" stopColor="#8df8ff" /></linearGradient>
-          </defs>
-          <path ref={threadGlowRef} className="immersive-brand-thread-glow" pathLength="1" d="M-90 626 C156 92 378 838 626 348 S1032 -70 1532 528" />
-          <path ref={threadRef} className="immersive-brand-thread-line" pathLength="1" d="M-90 626 C156 92 378 838 626 348 S1032 -70 1532 528" />
-          <path className="immersive-brand-thread-pulse" pathLength="1" d="M-90 626 C156 92 378 838 626 348 S1032 -70 1532 528" />
-        </svg>
+        <BrandRibbon id="novatrix-thread" lineRef={threadRef} glowRef={threadGlowRef} />
         <div className="immersive-brand-stamp" aria-hidden="true"><NovatrixLogo compact /><span>NOVATRIX<br />DIGITAL STUDIO</span></div>
         <div ref={heroRef} className="immersive-chapter immersive-hero">
           <div className="immersive-hero-copy">

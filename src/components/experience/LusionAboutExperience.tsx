@@ -7,6 +7,7 @@ import { useScrollScrub } from './useScrollScrub'
 import { services } from '@/lib/content/services'
 import { AboutParticleCanvas } from './AboutParticleCanvas'
 import { SceneCorners } from './SceneCorners'
+import { BrandRibbon } from './BrandRibbon'
 
 const collective = [
   ['01', 'Stratégie produit', 'Cadrer le problème, simplifier le parcours et décider ce qui mérite réellement d’être construit.'],
@@ -33,6 +34,7 @@ export function LusionAboutExperience() {
   const endRef = useRef<HTMLDivElement>(null)
   const progressRef = useRef(0)
   const progressLineRef = useRef<HTMLSpanElement>(null)
+  const threadRef = useRef<SVGPathElement>(null)
 
   useScrollScrub({
     rootRef,
@@ -86,6 +88,16 @@ export function LusionAboutExperience() {
       const endAlpha = phase(current, .915, .965)
       setLayer(endRef.current, endAlpha, `translate3d(0,${(1 - endAlpha) * 24}vh,0)`)
       if (progressLineRef.current) progressLineRef.current.style.transform = `scaleX(${current})`
+
+      // Ruban signature (Etape C) : décliné sur la transition hero → story, seul moment de
+      // la page qui joue le même rôle qu'un "passage de chapitre" marqué sur la Home (0-4).
+      // Se dessine pendant la sortie du hero puis s'efface avant l'arrivée du collectif.
+      if (threadRef.current) {
+        const threadDraw = phase(current, .02, .34)
+        const threadOpacity = phase(current, .02, .09) * (1 - phase(current, .3, .38))
+        threadRef.current.style.strokeDashoffset = String(1 - threadDraw)
+        threadRef.current.style.opacity = String(threadOpacity)
+      }
     },
   })
 
@@ -93,6 +105,7 @@ export function LusionAboutExperience() {
     <section ref={rootRef} className="about-immersive" aria-label="À propos de Novatrix">
       <div ref={stageRef} className="about-immersive-stage" data-chapter="1">
         <SceneCorners />
+        <BrandRibbon id="novatrix-about-thread" lineRef={threadRef} className="immersive-brand-thread--on-dark" />
         <AboutParticleCanvas progressRef={progressRef} />
         <div ref={heroRef} className="about-chapter about-hero-scene">
           <p>Studio créatif · IA · produits numériques</p>

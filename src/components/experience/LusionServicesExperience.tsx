@@ -9,6 +9,7 @@ import { services } from '@/lib/content/services'
 import { keyStats } from '@/lib/content/stats'
 import { siteConfig } from '@/lib/content/site'
 import { SceneCorners } from './SceneCorners'
+import { BrandRibbon } from './BrandRibbon'
 
 // Méthode en 4 étapes — reprend le principe déjà en place dans CapabilityDeck (cadrage,
 // IA/automatisation, design, développement) sans dupliquer son moteur d'animation propre :
@@ -32,6 +33,7 @@ export function LusionServicesExperience() {
   const proofRef = useRef<HTMLDivElement>(null)
   const endRef = useRef<HTMLDivElement>(null)
   const progressLineRef = useRef<HTMLSpanElement>(null)
+  const threadRef = useRef<SVGPathElement>(null)
   const [activeService, setActiveService] = useState(0)
 
   useScrollScrub({
@@ -74,6 +76,16 @@ export function LusionServicesExperience() {
       setLayer(endRef.current, endAlpha, `translate3d(0,${(1 - endAlpha) * 22}vh,0)`)
 
       if (progressLineRef.current) progressLineRef.current.style.transform = `scaleX(${current})`
+
+      // Ruban signature (Étape C) : décliné sur la transition entre le chapitre chiffré
+      // (fond glow) et la clôture/CTA (fond void), pour marquer ce passage exactement comme
+      // le fait le ruban de la Home entre ses propres chapitres.
+      if (threadRef.current) {
+        const threadDraw = phase(current, .78, .95)
+        const threadOpacity = phase(current, .78, .85) * (1 - phase(current, .93, .97))
+        threadRef.current.style.strokeDashoffset = String(1 - threadDraw)
+        threadRef.current.style.opacity = String(threadOpacity)
+      }
     },
   })
 
@@ -81,6 +93,7 @@ export function LusionServicesExperience() {
     <section ref={rootRef} className="services-immersive" aria-label="Services Novatrix">
       <div ref={stageRef} className="services-immersive-stage" data-chapter="1">
         <SceneCorners />
+        <BrandRibbon id="novatrix-services-thread" lineRef={threadRef} className="immersive-brand-thread--on-dark" />
         <div ref={heroRef} className="services-chapter services-hero-scene">
           <p>Services / méthode / systèmes</p>
           <h1>Des systèmes qui<br />travaillent avec vous.</h1>
