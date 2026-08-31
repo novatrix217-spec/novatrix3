@@ -7,6 +7,7 @@ import { useScrollScrub } from './useScrollScrub'
 import { ContactForm } from '@/components/forms/ContactForm'
 import { WhatsAppCta } from '@/components/ui/WhatsAppCta'
 import { siteConfig } from '@/lib/content/site'
+import { SceneCorners } from './SceneCorners'
 
 /**
  * Expérience Contact (Lot 6) : arrivée immersive courte, puis un chapitre formulaire
@@ -61,6 +62,7 @@ export function LusionContactExperience() {
   return (
     <section ref={rootRef} className="contact-immersive" aria-label="Contact Novatrix">
       <div ref={stageRef} className="contact-immersive-stage" data-chapter="1">
+        <SceneCorners />
         <div ref={introRef} className="contact-chapter contact-intro-scene">
           <p>Contact / nouveau projet</p>
           <h1>Parlons de ce qui<br />vient après.</h1>

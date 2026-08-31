@@ -8,6 +8,7 @@ import { MotionVideo } from '@/components/media/MotionVideo'
 import { services } from '@/lib/content/services'
 import { keyStats } from '@/lib/content/stats'
 import { siteConfig } from '@/lib/content/site'
+import { SceneCorners } from './SceneCorners'
 
 // Méthode en 4 étapes — reprend le principe déjà en place dans CapabilityDeck (cadrage,
 // IA/automatisation, design, développement) sans dupliquer son moteur d'animation propre :
@@ -79,6 +80,7 @@ export function LusionServicesExperience() {
   return (
     <section ref={rootRef} className="services-immersive" aria-label="Services Novatrix">
       <div ref={stageRef} className="services-immersive-stage" data-chapter="1">
+        <SceneCorners />
         <div ref={heroRef} className="services-chapter services-hero-scene">
           <p>Services / méthode / systèmes</p>
           <h1>Des systèmes qui<br />travaillent avec vous.</h1>

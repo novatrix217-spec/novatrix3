@@ -7,6 +7,7 @@ import type { CSSProperties } from 'react'
 import { phase, setLayer } from '@/lib/scrollScrub'
 import { useScrollScrub } from './useScrollScrub'
 import { projectGallery } from '@/lib/content/projects'
+import { SceneCorners } from './SceneCorners'
 
 const categoryStats = Array.from(new Set(projectGallery.map((project) => project.category)))
 
@@ -105,6 +106,7 @@ export function LusionProjectsExperience() {
   return (
     <section ref={rootRef} className="projects-immersive" aria-label="Projets Novatrix">
       <div ref={stageRef} className="projects-immersive-stage" data-chapter="1">
+        <SceneCorners />
         <div ref={introRef} className="projects-chapter projects-intro-scene">
           <p>Portfolio / sélection 2026</p>
           <h1 ref={introTitleRef}>PROJETS</h1>

@@ -6,6 +6,7 @@ import { phase, setLayer } from '@/lib/scrollScrub'
 import { useScrollScrub } from './useScrollScrub'
 import { services } from '@/lib/content/services'
 import { AboutParticleCanvas } from './AboutParticleCanvas'
+import { SceneCorners } from './SceneCorners'
 
 const collective = [
   ['01', 'Stratégie produit', 'Cadrer le problème, simplifier le parcours et décider ce qui mérite réellement d’être construit.'],
@@ -91,6 +92,7 @@ export function LusionAboutExperience() {
   return (
     <section ref={rootRef} className="about-immersive" aria-label="À propos de Novatrix">
       <div ref={stageRef} className="about-immersive-stage" data-chapter="1">
+        <SceneCorners />
         <AboutParticleCanvas progressRef={progressRef} />
         <div ref={heroRef} className="about-chapter about-hero-scene">
           <p>Studio créatif · IA · produits numériques</p>

@@ -10,6 +10,7 @@ import { projectGallery } from '@/lib/content/projects'
 import { phase, windowOpacity, setLayer as updateLayer } from '@/lib/scrollScrub'
 import { useScrollScrub } from './useScrollScrub'
 import { ImmersiveWorldCanvas } from './ImmersiveWorldCanvas'
+import { SceneCorners } from './SceneCorners'
 
 function selectMosaicVideo(index: number) {
   window.dispatchEvent(new CustomEvent('novatrix:video-focus', { detail: { index } }))
@@ -257,6 +258,7 @@ export function LusionHomeExperience() {
   return (
     <section ref={rootRef} className="immersive-home" aria-label="Expérience Novatrix">
       <div ref={stageRef} className="immersive-home-stage" data-chapter="1" data-sound="off">
+        <SceneCorners />
         <svg className="immersive-brand-thread" viewBox="0 0 1440 760" preserveAspectRatio="none" aria-hidden="true">
           <defs>
             <filter id="novatrix-thread-glow"><feGaussianBlur stdDeviation="11" /></filter>

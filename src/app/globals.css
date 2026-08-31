@@ -271,6 +271,41 @@
   .page-hero { padding-block: 176px 110px; }
 }
 
+/* Motif de repères "+" aux quatre coins — ancrage graphique transversal aux 5 expériences
+   scroll-scrub, cohérent sur fond sombre ET clair (couleur liée à currentColor, donc au
+   `--stage-fg` posé par le système de scènes ci-dessus). Une seule classe utilitaire portée
+   par le stage de chaque page plutôt qu'un motif recodé par page : 4 petits repères en croix
+   (trait horizontal + trait vertical de 1px, ~11px de côté), un par enfant `<i>` (l'élément
+   porteur a besoin de 4 coins, un seul élément CSS n'offrant que 2 pseudo-éléments).
+   Purement décoratif : `pointer-events: none` + `aria-hidden="true"` porté par l'appelant. */
+.scene-corners {
+  --corner-size: 11px;
+  --corner-inset: 18px;
+  --corner-color: currentColor;
+  --corner-opacity: .5;
+  position: absolute;
+  z-index: 6;
+  inset: var(--corner-inset);
+  pointer-events: none;
+  opacity: var(--corner-opacity);
+}
+.scene-corners i {
+  position: absolute;
+  display: block;
+  width: var(--corner-size);
+  height: var(--corner-size);
+  background:
+    linear-gradient(var(--corner-color), var(--corner-color)) 50% / 100% 1px no-repeat,
+    linear-gradient(90deg, var(--corner-color), var(--corner-color)) 50% / 1px 100% no-repeat;
+}
+.scene-corners i:nth-child(1) { top: 0; left: 0; }
+.scene-corners i:nth-child(2) { top: 0; right: 0; }
+.scene-corners i:nth-child(3) { bottom: 0; left: 0; }
+.scene-corners i:nth-child(4) { bottom: 0; right: 0; }
+@media (max-width: 900px) {
+  .scene-corners { --corner-inset: 12px; }
+}
+
 /* Expérience immersive — scènes interactives, transitions et navigation Novatrix. */
 .experience-loader {
   position: fixed; inset: 0; z-index: 999; overflow: hidden; background: #050505; color: #fff;
