@@ -14,7 +14,7 @@ function isCurrent(pathname: string, href: string) {
 export function Header() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
-  const [soundEnabled, setSoundEnabled] = useState(false)
+  const [soundEnabled, setSoundEnabled] = useState(true)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 

@@ -59,7 +59,12 @@ export function LusionHomeExperience() {
   const threadRef = useRef<SVGPathElement>(null)
   const threadGlowRef = useRef<SVGPathElement>(null)
 
-  const soundEnabledRef = useRef(false)
+  // Son activé par défaut (demande explicite) : la première tentative de lecture avec son
+  // peut être bloquée par la politique d'autoplay du navigateur tant qu'aucune interaction
+  // n'a eu lieu — `syncPlaybackRef` retente alors muet sans casser l'expérience, et le son
+  // se déclenche dès le premier geste de l'utilisateur (scroll, clic) via `soundChange`
+  // ou le prochain changement de chapitre.
+  const soundEnabledRef = useRef(true)
   const activeMosaicIndexRef = useRef(0)
   const lastChapterRef = useRef(-1)
   const syncPlaybackRef = useRef<(chapter: number) => void>(() => undefined)
@@ -258,7 +263,7 @@ export function LusionHomeExperience() {
 
   return (
     <section ref={rootRef} className="immersive-home" aria-label="Expérience Novatrix">
-      <div ref={stageRef} className="immersive-home-stage" data-chapter="1" data-sound="off">
+      <div ref={stageRef} className="immersive-home-stage" data-chapter="1" data-sound="on">
         <SceneCorners />
         <BrandRibbon id="novatrix-thread" lineRef={threadRef} glowRef={threadGlowRef} />
         <div className="immersive-brand-stamp" aria-hidden="true"><NovatrixLogo compact /><span>NOVATRIX<br />DIGITAL STUDIO</span></div>
